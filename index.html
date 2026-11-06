@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Russisch lernen – Interaktive Sprach-App</title>
+
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4F46E5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Russisch">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
+
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sticky App Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-icon">🐻</span>
+        <span>Russisch</span>
+      </div>
+      <div class="header-stats">
+        <div class="stat-pill streak" id="headerStreakPill" title="Aktueller Streak">
+          <span>🔥</span>
+          <span id="headerStreakVal">0</span>
+        </div>
+        <div class="stat-pill xp" id="headerXpPill" title="Gesamt-XP">
+          <span>⚡</span>
+          <span id="headerXpVal">0</span>
+        </div>
+        <div class="stat-pill hearts" id="headerHeartsPill" title="Verbleibende Herzen">
+          <span>❤️</span>
+          <span id="headerHeartsVal">5</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="app-content">
+
+      <!-- ========================================== -->
+      <!-- 1. VIEW: LERNEN (Dashboard & Lernpfad)      -->
+      <!-- ========================================== -->
+      <section id="view-learn" class="view-section active">
+        <!-- Dashboard Willkommen -->
+        <div class="dashboard-welcome">
+          <div class="welcome-info">
+            <h1 id="welcomeGreeting">Привет, Lerner!</h1>
+            <p id="welcomeSub">Bist du bereit für deine tägliche Dosis Russisch?</p>
+          </div>
+          <div style="font-size: 2.5rem;">🇷🇺</div>
+        </div>
+
+        <!-- Tagesziel-Fortschritt -->
+        <div class="daily-goal-card">
+          <div class="goal-header">
+            <span>🎯 Tagesziel</span>
+            <span id="dailyGoalText">0 / 50 XP</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="dailyGoalBar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Weiterlernen Quick-Action -->
+        <div style="margin-bottom: 24px;">
+          <button class="btn-3d btn-primary" id="btnContinueLearning">
+            <span>▶️ Jetzt weiterlernen</span>
+          </button>
+        </div>
+
+        <!-- Winding Duolingo Learning Path -->
+        <div class="learning-path" id="learningPathContainer">
+          <!-- Dynamisch generiert durch app.js -->
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 2. VIEW: ALPHABET (Kyrillisch-Trainer)      -->
+      <!-- ========================================== -->
+      <section id="view-alphabet" class="view-section">
+        <div style="margin-bottom: 16px;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px;">Kyrillisches Alphabet</h2>
+          <p style="font-size: 0.9rem; color: var(--text-secondary);">Alle 33 russischen Buchstaben mit deutscher Aussprache & Beispielen</p>
+        </div>
+
+        <!-- Filter-Chips -->
+        <div class="alphabet-toolbar" id="alphabetFilterBar">
+          <button class="filter-chip active" data-filter="all">Alle (33)</button>
+          <button class="filter-chip" data-filter="identisch">Echte Freunde (5)</button>
+          <button class="filter-chip" data-filter="falscher_freund">Falsche Freunde (6)</button>
+          <button class="filter-chip" data-filter="neu">Kyrillisch (15)</button>
+          <button class="filter-chip" data-filter="sonderzeichen">Sonderzeichen (7)</button>
+        </div>
+
+        <!-- Trainings-Modi Leiste -->
+        <div style="background-color: var(--bg-card); border: 2px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 20px; box-shadow: var(--shadow-card);">
+          <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 8px;">🎯 Buchstabentraining starten:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <button class="btn-3d btn-secondary" style="padding: 10px; font-size: 0.8rem;" id="btnAlphaQuizRecognize">
+              <span>🔍 Erkennen</span>
+            </button>
+            <button class="btn-3d btn-secondary" style="padding: 10px; font-size: 0.8rem;" id="btnAlphaQuizSounds">
+              <span>🔊 Laut-Zuordnung</span>
+            </button>
+            <button class="btn-3d btn-secondary" style="padding: 10px; font-size: 0.8rem;" id="btnAlphaQuizMatchCase">
+              <span>Aa Groß & Klein</span>
+            </button>
+            <button class="btn-3d btn-secondary" style="padding: 10px; font-size: 0.8rem;" id="btnAlphaQuizReadWords">
+              <span>📖 Wörter lesen</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Buchstabengitter -->
+        <div class="alphabet-grid" id="alphabetGrid">
+          <!-- Dynamisch generiert durch app.js -->
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 3. VIEW: VOKABELN (Wörterbuch & Karteikarten)-->
+      <!-- ========================================== -->
+      <section id="view-vocab" class="view-section">
+        <div style="margin-bottom: 14px;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px;">Vokabeltrainer</h2>
+          <p style="font-size: 0.9rem; color: var(--text-secondary);">Über 160 Grundwortschatz-Vokabeln mit Audio & Beispielen</p>
+        </div>
+
+        <!-- Modus-Umschalter: Wörterbuch vs. Karteikarten -->
+        <div class="vocab-mode-toggle">
+          <button class="mode-tab-btn active" id="tabVocabList">📚 Wörterliste</button>
+          <button class="mode-tab-btn" id="tabVocabCards">🃏 Karteikarten-Modus</button>
+        </div>
+
+        <!-- Suchleiste -->
+        <div class="vocab-search-bar">
+          <span>🔍</span>
+          <input type="text" id="vocabSearchInput" placeholder="Russisch, Deutsch oder Lautschrift suchen..." autocomplete="off">
+          <button class="btn-ghost" id="vocabSearchClear" style="display: none; padding: 2px 6px;">✕</button>
+        </div>
+
+        <!-- Kategorien Filter & Eigene Kategorie Button -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
+          <div class="alphabet-toolbar" id="vocabCategoryFilterBar" style="flex: 1; margin-bottom: 0;">
+            <!-- Dynamisch generiert -->
+          </div>
+          <button class="btn-ghost" id="btnAddCategoryBtn" style="white-space: nowrap; font-weight: 700; color: var(--primary); padding: 8px 12px; font-size: 0.85rem; border: 1.5px dashed var(--primary); border-radius: var(--radius-full); background: var(--primary-light);">
+            ➕ Kategorie
+          </button>
+        </div>
+
+        <!-- Container 1: Wörterliste -->
+        <div id="vocabListContainer">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
+            <span id="vocabCountLabel">160 Vokabeln</span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-ghost" id="btnFilterFavorites" style="font-size: 0.82rem;">❤️ Nur Favoriten</button>
+            </div>
+          </div>
+          <div class="vocab-list" id="vocabListItems">
+            <!-- Dynamisch generiert -->
+          </div>
+        </div>
+
+        <!-- Container 2: Karteikarten 3D Flip -->
+        <div id="vocabFlashcardsContainer" style="display: none;">
+          <div style="text-align: center; margin-bottom: 12px; font-size: 0.9rem; font-weight: 700; color: var(--text-secondary);">
+            <span id="flashcardProgressLabel">Karte 1 von 20</span>
+          </div>
+
+          <div class="flashcard-stage" id="flashcardStage">
+            <div class="flashcard-card" id="activeFlashcard">
+              <!-- Vorderseite (Russisch) -->
+              <div class="flashcard-face flashcard-front">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; font-weight: 700;" id="cardFrontCategory">KATEGORIE</div>
+                <div class="vocab-ru-word" style="font-size: 2.2rem; margin-bottom: 8px;" id="cardFrontRussian">Привет</div>
+                <div class="vocab-phonetic" style="font-size: 1.1rem; margin-bottom: 14px;" id="cardFrontTranslit">Priwét</div>
+                <button class="btn-speaker" id="cardFrontSpeaker" style="margin-right: 0;">🔊</button>
+                <div style="margin-top: 20px; font-size: 0.8rem; color: var(--text-muted);">Tippe auf die Karte zum Umdrehen</div>
+              </div>
+              <!-- Rückseite (Deutsch & Beispielsatz) -->
+              <div class="flashcard-face flashcard-back">
+                <div style="font-size: 0.85rem; color: var(--primary); margin-bottom: 8px; font-weight: 700;">DEUTSCHE BEDEUTUNG</div>
+                <div style="font-size: 1.6rem; font-weight: 800; color: var(--text-primary); margin-bottom: 14px;" id="cardBackGerman">Hallo</div>
+                <div style="background-color: var(--bg-card); border-radius: var(--radius-md); padding: 12px; border: 1.5px solid var(--border-color); width: 100%; text-align: left; margin-bottom: 10px;">
+                  <div style="font-weight: 700; font-size: 0.9rem; font-family: var(--font-cyrillic);" id="cardBackExampleRu">Привет, как дела?</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;" id="cardBackExampleDe">Hallo, wie geht's?</div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Tippe erneut zum Zurückdrehen</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flashcard-controls">
+            <button class="btn-3d btn-danger" id="btnCardMistake">
+              <span>❌ Noch üben</span>
+            </button>
+            <button class="btn-3d btn-success" id="btnCardMastered">
+              <span>✅ Gewusst!</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 4. VIEW: ÜBEN (Quiz- & Trainingsmodi)       -->
+      <!-- ========================================== -->
+      <section id="view-practice" class="view-section">
+        <div style="margin-bottom: 18px;">
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px;">Trainingszentrum</h2>
+          <p style="font-size: 0.9rem; color: var(--text-secondary);">Festige dein Wissen und frische verlorene Herzen wieder auf</p>
+        </div>
+
+        <div class="practice-grid">
+          <!-- Herzen auffrischen -->
+          <div class="practice-card" id="btnPracticeHearts">
+            <div class="practice-icon" style="background-color: #FEE2E2; color: #EF4444;">❤️</div>
+            <div class="practice-info">
+              <h3>Herzen auffrischen</h3>
+              <p>Löse 5 Übungen, um deine Herzen kostenlos aufzufüllen</p>
+            </div>
+          </div>
+
+          <!-- Schnelles Quiz -->
+          <div class="practice-card" id="btnPracticeQuickQuiz">
+            <div class="practice-icon" style="background-color: #FEF3C7; color: #F59E0B;">⚡</div>
+            <div class="practice-info">
+              <h3>10-Fragen Blitz-Quiz</h3>
+              <p>Gemischte Vokabel- und Grammatikfragen für extra XP</p>
+            </div>
+          </div>
+
+          <!-- Hörverstehen -->
+          <div class="practice-card" id="btnPracticeListening">
+            <div class="practice-icon" style="background-color: #E0E7FF; color: #4F46E5;">🎧</div>
+            <div class="practice-info">
+              <h3>Reines Hörverstehen</h3>
+              <p>Schärfe dein Gehör für die russische Aussprache</p>
+            </div>
+          </div>
+
+          <!-- Vokabel-Matching Paare -->
+          <div class="practice-card" id="btnPracticeMatching">
+            <div class="practice-icon" style="background-color: #D1FAE5; color: #10B981;">🧩</div>
+            <div class="practice-info">
+              <h3>Wort-Paare verbinden</h3>
+              <p>Russische und deutsche Begriffe blitzschnell matchen</p>
+            </div>
+          </div>
+
+          <!-- Schwierige Wörter wiederholen -->
+          <div class="practice-card" id="btnPracticeDifficult">
+            <div class="practice-icon" style="background-color: #FCE7F3; color: #EC4899;">🔁</div>
+            <div class="practice-info">
+              <h3>Schwierige Wörter</h3>
+              <p>Wiederhole Vokabeln, bei denen du Fehler gemacht hast</p>
+            </div>
+          </div>
+
+          <!-- Motorsport & Fahrzeuge Spezial -->
+          <div class="practice-card" id="btnPracticeMotorsport">
+            <div class="practice-icon" style="background-color: #FEE2E2; color: #DC2626;">🏎️</div>
+            <div class="practice-info">
+              <h3>Fahrzeuge & Motorsport</h3>
+              <p>Trainiere Technik, Rennstrecke und Auto-Vokabular</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- 5. VIEW: PROFIL & EINSTELLUNGEN            -->
+      <!-- ========================================== -->
+      <section id="view-profile" class="view-section">
+        <!-- Hero Box -->
+        <div class="profile-hero">
+          <div class="profile-avatar">👨‍🚀</div>
+          <h2 style="font-size: 1.4rem; font-weight: 800;" id="profileUsername">Russisch-Entdecker</h2>
+          <div class="profile-level-badge" id="profileLevelTitle">Stufe 1: Novize</div>
+
+          <div style="margin-top: 14px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">
+              <span>Level-Fortschritt</span>
+              <span id="profileXpProgressText">0 / 100 XP</span>
+            </div>
+            <div class="progress-track" style="height: 10px;">
+              <div class="progress-fill" id="profileXpProgressBar" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Statistiken -->
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-box-val" id="statTotalXp">0</div>
+            <div class="stat-box-label">Gesamt-XP</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-val" id="statLongestStreak">0 Tage</div>
+            <div class="stat-box-label">Längster Streak</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-val" id="statCompletedLessons">0</div>
+            <div class="stat-box-label">Lektionen fertig</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-val" id="statLearnedVocab">0</div>
+            <div class="stat-box-label">Vokabeln gelernt</div>
+          </div>
+        </div>
+
+        <!-- XP-Belohnungsshop & Inventar -->
+        <h3 class="section-title">🛍️ XP-Belohnungsshop & Booster</h3>
+        <div class="shop-container" id="profileXpShop">
+          <!-- Inventar-Statusleiste -->
+          <div class="inventory-status-bar">
+            <div class="inv-item">
+              <span id="invShieldStatus">🛡️ Schild: Inaktiv</span>
+            </div>
+            <div class="inv-item">
+              <span id="invFreezeStatus">🧊 Freezes: 0</span>
+            </div>
+            <div class="inv-item">
+              <span id="invBoosterStatus">⚡ 2x XP: Inaktiv</span>
+            </div>
+          </div>
+
+          <!-- Aktiver Profil-Titel Wähler -->
+          <div style="background-color: var(--bg-card); border: 2px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm);">
+            <span style="font-weight: 700; font-size: 0.88rem;">Profil-Titel:</span>
+            <select class="editor-select" id="selectActiveTitle" style="width: auto; max-width: 200px; padding: 4px 8px; font-size: 0.85rem;">
+              <option value="Novize (Новичок)">Novize (Новичок)</option>
+            </select>
+          </div>
+
+          <!-- Shop Artikel Karten -->
+          <div class="shop-grid">
+            <div class="shop-card">
+              <div class="shop-card-icon">🛡️</div>
+              <div class="shop-card-info">
+                <h4>Herz-Schutzschild</h4>
+                <p>Schützt vor dem nächsten Fehler</p>
+              </div>
+              <button class="btn-3d btn-primary btn-buy-item" data-item="shield" data-cost="150">
+                <span>150 ⚡</span>
+              </button>
+            </div>
+
+            <div class="shop-card">
+              <div class="shop-card-icon">🧊</div>
+              <div class="shop-card-info">
+                <h4>Streak-Freeze</h4>
+                <p>Rettet Serie bei 1 verpassten Tag</p>
+              </div>
+              <button class="btn-3d btn-primary btn-buy-item" data-item="freeze" data-cost="250">
+                <span>250 ⚡</span>
+              </button>
+            </div>
+
+            <div class="shop-card">
+              <div class="shop-card-icon">⚡</div>
+              <div class="shop-card-info">
+                <h4>2x XP-Booster</h4>
+                <p>15 Min. lang doppelte XP erhalten</p>
+              </div>
+              <button class="btn-3d btn-primary btn-buy-item" data-item="booster" data-cost="200">
+                <span>200 ⚡</span>
+              </button>
+            </div>
+
+            <div class="shop-card">
+              <div class="shop-card-icon">❤️</div>
+              <div class="shop-card-info">
+                <h4>5 Herzen auffüllen</h4>
+                <p>Sofort alle 5 Herzen regenerieren</p>
+              </div>
+              <button class="btn-3d btn-primary btn-buy-item" data-item="hearts_refill" data-cost="100">
+                <span>100 ⚡</span>
+              </button>
+            </div>
+
+            <div class="shop-card">
+              <div class="shop-card-icon">👑</div>
+              <div class="shop-card-info">
+                <h4>Titel: Der Zaren-Lerner</h4>
+                <p>Königlicher Titel für dein Profil</p>
+              </div>
+              <button class="btn-3d btn-secondary btn-buy-item" data-item="title_Der Zaren-Lerner (Царь)" data-cost="300">
+                <span>300 ⚡</span>
+              </button>
+            </div>
+
+            <div class="shop-card">
+              <div class="shop-card-icon">🕶️</div>
+              <div class="shop-card-info">
+                <h4>Titel: Straßen-Boss</h4>
+                <p>Für Kenner der Straßensprache</p>
+              </div>
+              <button class="btn-3d btn-secondary btn-buy-item" data-item="title_Straßen-Boss (Чувак)" data-cost="400">
+                <span>400 ⚡</span>
+              </button>
+            </div>
+
+            <div class="shop-card">
+              <div class="shop-card-icon">🚀</div>
+              <div class="shop-card-info">
+                <h4>Titel: Kosmonaut</h4>
+                <p>Greife nach den russischen Sternen</p>
+              </div>
+              <button class="btn-3d btn-secondary btn-buy-item" data-item="title_Kosmonaut (Космонавт)" data-cost="600">
+                <span>600 ⚡</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Erfolge & Abzeichen -->
+        <h3 class="section-title">🏆 Erfolge & Abzeichen (20 Meilensteine)</h3>
+        <div class="achievements-list" id="profileAchievementsList">
+          <!-- Dynamisch generiert -->
+        </div>
+
+        <!-- Einstellungen -->
+        <h3 class="section-title">⚙️ Einstellungen</h3>
+        <div class="settings-card">
+          <div class="settings-row">
+            <span class="settings-label">Soundeffekte (SFX)</span>
+            <label class="switch">
+              <input type="checkbox" id="settingSfx" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Audio-Sprachausgabe (TTS)</span>
+            <label class="switch">
+              <input type="checkbox" id="settingSpeech" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Dunkelmodus (Dark Mode)</span>
+            <label class="switch">
+              <input type="checkbox" id="settingDarkMode">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Sprechgeschwindigkeit</span>
+            <select class="editor-select" id="settingSpeechRate" style="width: 120px; padding: 6px 10px; font-size: 0.9rem;">
+              <option value="0.75">0.75x (Sehr langsam)</option>
+              <option value="0.85" selected>0.85x (Empfohlen)</option>
+              <option value="1.0">1.0x (Normal)</option>
+              <option value="1.2">1.2x (Schnell)</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Tägliches Lernziel</span>
+            <select class="editor-select" id="settingDailyGoal" style="width: 140px; padding: 6px 10px; font-size: 0.9rem;">
+              <option value="100">100 XP (Leicht, ~8 Min)</option>
+              <option value="200" selected>200 XP (Normal, ~15 Min)</option>
+              <option value="350">350 XP (Intensiv, ~25 Min)</option>
+              <option value="500">500 XP (Extrem, ~40 Min)</option>
+            </select>
+          </div>
+          <div class="settings-row" id="voiceStatusRow">
+            <span class="settings-label">Sprachausgabe-Status</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="voiceStatusText" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">Prüfe...</span>
+              <button class="btn-ghost" id="btnTestVoice" style="padding: 4px 8px; font-size: 0.8rem;">🔊 Test</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kurs-Editor Button & Reset -->
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
+          <button class="btn-3d btn-primary" id="btnOpenCourseEditor">
+            <span>🛠️ Kurs-Editor öffnen (CMS)</span>
+          </button>
+          <button class="btn-3d btn-danger" id="btnResetProgress" style="background-color: transparent; color: var(--danger); border: 2px solid var(--danger); box-shadow: none;">
+            <span>⚠️ Lernfortschritt zurücksetzen</span>
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Feste Bottom-Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-tab-btn active" data-tab="learn">
+        <span class="nav-icon">🗺️</span>
+        <span>Lernen</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="alphabet">
+        <span class="nav-icon">🔤</span>
+        <span>Alphabet</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="vocab">
+        <span class="nav-icon">📚</span>
+        <span>Vokabeln</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="practice">
+        <span class="nav-icon">🎯</span>
+        <span>Üben</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="profile">
+        <span class="nav-icon">👤</span>
+        <span>Profil</span>
+      </button>
+    </nav>
+
+    <!-- =================================================================== -->
+    <!-- MODALS & OVERLAYS                                                   -->
+    <!-- =================================================================== -->
+
+    <!-- 1. THEORIE / LEKTIONS-EINFÜHRUNG MODAL -->
+    <div class="theory-modal-overlay" id="theoryModalOverlay">
+      <div class="theory-sheet">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+          <span style="font-size: 0.85rem; font-weight: 800; color: var(--primary);" id="theoryUnitTag">EINHEIT 1 • LEKTION 1</span>
+          <button class="btn-ghost" id="btnCloseTheory" style="font-size: 1.2rem; padding: 0 6px;">✕</button>
+        </div>
+        <h3 id="theoryTitle">Lektions-Einführung</h3>
+        <div class="theory-content" id="theoryContent">
+          <!-- Dynamischer Inhalt -->
+        </div>
+        <div class="theory-tip-box" id="theoryTipBox" style="display: none;">
+          <!-- Dynamischer Tipp -->
+        </div>
+        <button class="btn-3d btn-primary" id="btnStartLessonExercises">
+          <span>🚀 Übungen starten (+25 XP)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. INTERAKTIVES QUIZ-MODAL -->
+    <div class="quiz-modal" id="quizModal">
+      <!-- Quiz Header -->
+      <div class="quiz-header">
+        <button class="quiz-close-btn" id="btnQuitQuiz" title="Beenden">✕</button>
+        <div class="quiz-progress-bar">
+          <div class="quiz-progress-fill" id="quizProgressFill" style="width: 0%;"></div>
+        </div>
+        <div class="quiz-hearts" id="quizHeartsDisplay">
+          <span>❤️</span>
+          <span id="quizHeartsVal">5</span>
+        </div>
+      </div>
+
+      <!-- Quiz Body / Fragebereich -->
+      <div class="quiz-body" id="quizBody">
+        <!-- Dynamischer Übungsinhalt -->
+      </div>
+
+      <!-- Quiz Footer / Feedback Sheet -->
+      <div class="quiz-footer" id="quizFooter">
+        <div class="feedback-msg" id="feedbackMsg" style="display: none;">
+          <span class="feedback-icon" id="feedbackIcon">✅</span>
+          <div class="feedback-text">
+            <h4 id="feedbackTitle">Richtig!</h4>
+            <p id="feedbackExplanation">Erklärung</p>
+          </div>
+        </div>
+        <button class="btn-3d btn-primary" id="btnQuizAction">
+          <span id="quizActionText">Überprüfen</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. CELEBRATION / ERFOLGS-MODAL -->
+    <div class="celebration-modal" id="celebrationModal">
+      <div class="celebration-badge" id="celebIcon">🎉</div>
+      <h2 class="celebration-title" id="celebTitle">Lektion gemeistert!</h2>
+      <p class="celebration-subtitle" id="celebSubtitle">Hervorragend gearbeitet. Du machst tolle Fortschritte!</p>
+
+      <div class="rewards-grid">
+        <div class="reward-card">
+          <div class="reward-card-val" id="celebRewardXp">+25 XP</div>
+          <div class="reward-card-lbl">Erfahrungspunkte</div>
+        </div>
+        <div class="reward-card">
+          <div class="reward-card-val" id="celebAccuracy">100%</div>
+          <div class="reward-card-lbl">Genauigkeit</div>
+        </div>
+      </div>
+
+      <button class="btn-3d btn-success" id="btnCelebrationContinue" style="max-width: 320px;">
+        <span>Weiter zum Lernpfad</span>
+      </button>
+    </div>
+
+    <!-- 4. BUCHSTABEN-DETAIL MODAL -->
+    <div class="theory-modal-overlay" id="letterDetailModal">
+      <div class="theory-sheet">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);" id="letterModalCategory">BUCHSTABE</span>
+          <button class="btn-ghost" id="btnCloseLetterDetail" style="font-size: 1.2rem; padding: 0 6px;">✕</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+          <div class="letter-big" style="font-size: 3.5rem;" id="letterModalBig">А а</div>
+          <div>
+            <div style="font-weight: 800; font-size: 1.2rem;" id="letterModalName">а (a)</div>
+            <div style="color: var(--primary); font-weight: 600;" id="letterModalIpa">IPA: /a/</div>
+          </div>
+          <button class="btn-speaker" id="btnLetterModalAudio" style="margin-left: auto;">🔊</button>
+        </div>
+
+        <div style="background-color: var(--bg-subtle); padding: 14px; border-radius: var(--radius-md); margin-bottom: 16px; border: 1px solid var(--border-color);">
+          <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 4px;">DEUTSCHE AUSSPRACHEHILFE:</div>
+          <div style="font-size: 1rem; font-weight: 600;" id="letterModalPhonetic">Wie 'a' in 'Apfel'</div>
+        </div>
+
+        <div style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;" id="letterModalExplanation">
+          Erklärungstext...
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 14px; margin-bottom: 20px;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">BEISPIELWORT:</div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <span style="font-size: 1.3rem; font-weight: 800; font-family: var(--font-cyrillic);" id="letterModalWordRu">Автобус</span>
+              <span style="font-size: 0.9rem; color: var(--text-muted); margin-left: 8px;" id="letterModalWordTranslit">(Awtóbus)</span>
+              <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 2px;" id="letterModalWordDe">Bus</div>
+            </div>
+            <button class="btn-speaker" id="btnLetterModalWordAudio">🔊</button>
+          </div>
+        </div>
+
+        <button class="btn-3d btn-secondary" id="btnTrainThisLetter">
+          <span>🎯 Diesen Buchstaben üben</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 5. KURS-EDITOR (CMS MODAL) -->
+    <div class="editor-modal" id="courseEditorModal">
+      <div class="editor-header">
+        <h2 style="font-size: 1.25rem; font-weight: 800;">🛠️ Integrierter Kurs-Editor</h2>
+        <button class="btn-ghost" id="btnCloseEditor" style="font-size: 1.3rem;">✕</button>
+      </div>
+      <div class="editor-body">
+        <div class="editor-tabs">
+          <button class="filter-chip active" id="editorTabOverview">📋 Übersicht & JSON</button>
+          <button class="filter-chip" id="editorTabAddVocab">➕ Vokabel ergänzen</button>
+          <button class="filter-chip" id="editorTabAddLesson">➕ Lektion erstellen</button>
+        </div>
+
+        <!-- Tab 1: Export / Import & Kurs-JSON -->
+        <div id="editorContentOverview">
+          <div style="background-color: var(--bg-card); border: 2px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; box-shadow: var(--shadow-card);">
+            <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 8px;">Kursdaten exportieren & importieren</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">
+              Speichere oder teile deine Kursinhalte als JSON-Datei. Dein persönlicher Fortschritt (XP, Streaks, Level) bleibt dabei stets sicher erhalten.
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn-3d btn-primary" id="btnExportCourseJson" style="width: auto; padding: 10px 16px; font-size: 0.85rem;">
+                <span>💾 JSON herunterladen</span>
+              </button>
+              <label class="btn-3d btn-secondary" style="width: auto; padding: 10px 16px; font-size: 0.85rem; cursor: pointer;">
+                <span>📂 JSON importieren</span>
+                <input type="file" id="inputImportJsonFile" accept=".json" style="display: none;">
+              </label>
+              <button class="btn-3d btn-danger" id="btnResetCourseToDefault" style="width: auto; padding: 10px 16px; font-size: 0.85rem;">
+                <span>🔄 Auf Standard zurücksetzen</span>
+              </button>
+            </div>
+          </div>
+
+          <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 12px;">Aktuelle Kurseinheiten:</h3>
+          <div id="editorUnitsList" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Dynamisch generiert -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Neue Vokabel anlegen -->
+        <div id="editorContentAddVocab" style="display: none;">
+          <div style="background-color: var(--bg-card); border: 2px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-card);">
+            <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 14px;">Neue russische Vokabel hinzufügen</h3>
+            <div class="editor-form-group">
+              <label>Russisches Wort (kyrillisch)*</label>
+              <input type="text" class="editor-input" id="newVocabRu" placeholder="z.B. Скорость">
+            </div>
+            <div class="editor-form-group">
+              <label>Deutsche Übersetzung*</label>
+              <input type="text" class="editor-input" id="newVocabDe" placeholder="z.B. Geschwindigkeit">
+            </div>
+            <div class="editor-form-group">
+              <label>Deutsche Lautschrift (Aussprachehilfe)*</label>
+              <input type="text" class="editor-input" id="newVocabTranslit" placeholder="z.B. Skórast">
+            </div>
+            <div class="editor-form-group">
+              <label>Kategorie*</label>
+              <select class="editor-select" id="newVocabCategory">
+                <!-- Dynamisch befüllt -->
+              </select>
+            </div>
+            <div class="editor-form-group">
+              <label>Beispielsatz (Russisch)</label>
+              <input type="text" class="editor-input" id="newVocabExampleRu" placeholder="z.B. Машина едет с высокой скоростью.">
+            </div>
+            <div class="editor-form-group">
+              <label>Beispielsatz (Deutsch)</label>
+              <input type="text" class="editor-input" id="newVocabExampleDe" placeholder="z.B. Das Auto fährt mit hoher Geschwindigkeit.">
+            </div>
+            <button class="btn-3d btn-success" id="btnSaveNewVocab">
+              <span>💾 Vokabel speichern</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab 3: Neue Lektion anlegen -->
+        <div id="editorContentAddLesson" style="display: none;">
+          <div style="background-color: var(--bg-card); border: 2px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-card);">
+            <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 14px;">Neue Lektion zu Einheit hinzufügen</h3>
+            <div class="editor-form-group">
+              <label>Ziel-Einheit wählen*</label>
+              <select class="editor-select" id="newLessonUnitSelect">
+                <!-- Dynamisch -->
+              </select>
+            </div>
+            <div class="editor-form-group">
+              <label>Titel der Lektion*</label>
+              <input type="text" class="editor-input" id="newLessonTitle" placeholder="z.B. Boxenstopp & Reifen">
+            </div>
+            <div class="editor-form-group">
+              <label>Kurzbeschreibung*</label>
+              <input type="text" class="editor-input" id="newLessonDesc" placeholder="z.B. Lerne Vokabeln rund um den Boxenstopp">
+            </div>
+            <div class="editor-form-group">
+              <label>Theorie / Erklärung für den Nutzer*</label>
+              <textarea class="editor-textarea" id="newLessonTheory" rows="4" placeholder="Erkläre die neuen Wörter und Grammatikregeln auf Deutsch..."></textarea>
+            </div>
+            <div class="editor-form-group">
+              <label>XP-Belohnung</label>
+              <input type="number" class="editor-input" id="newLessonXp" value="30">
+            </div>
+            <button class="btn-3d btn-success" id="btnSaveNewLesson">
+              <span>💾 Lektion speichern & aktivieren</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 6. MODAL: EIGENE KATEGORIE ERSTELLEN -->
+    <div class="theory-modal-overlay" id="addCategoryModalOverlay">
+      <div class="theory-sheet">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800;">💡 Neue Vokabel-Kategorie</h3>
+          <button class="btn-ghost" id="btnCloseAddCategoryModal" style="font-size: 1.3rem;">✕</button>
+        </div>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 16px;">
+          Erstelle deine eigene Kategorie für das Wörterbuch und die Karteikarten.
+        </p>
+        <div class="editor-form-group">
+          <label>Kategorie-Name* (z. B. Gamer-Russisch, Musik, Essen)</label>
+          <input type="text" class="editor-input" id="newCatLabel" placeholder="z. B. Gaming & Discord">
+        </div>
+        <div class="editor-form-group">
+          <label>Passendes Icon / Emoji (z. B. 🎮, 💼, 🍕, 🎵)</label>
+          <input type="text" class="editor-input" id="newCatIcon" value="📁" maxlength="4">
+        </div>
+        <button class="btn-3d btn-success" id="btnSaveCategory">
+          <span>Kategorie speichern & aktivieren</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 7. CONFIRMATION DIALOG -->
+    <div class="confirm-overlay" id="confirmOverlay">
+      <div class="confirm-box">
+        <h3 id="confirmTitle">Bist du sicher?</h3>
+        <p id="confirmDesc">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+        <div class="confirm-actions">
+          <button class="btn-3d btn-secondary" id="btnConfirmCancel">Abbrechen</button>
+          <button class="btn-3d btn-danger" id="btnConfirmOk">Bestätigen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Benachrichtigungs-Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Konfetti Canvas -->
+    <canvas id="confettiCanvas"></canvas>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/data-alphabet.js"></script>
+  <script src="js/data-vocab.js"></script>
+  <script src="js/data-course.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Service Worker Registrierung -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.log('SW registration note:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

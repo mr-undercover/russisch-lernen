@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="gold512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </linearGradient>
+    <filter id="shadow512" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg512)"/>
+  <circle cx="256" cy="256" r="180" fill="#ffffff" fill-opacity="0.12"/>
+  <circle cx="256" cy="256" r="130" fill="#ffffff" fill-opacity="0.06"/>
+  <g filter="url(#shadow512)">
+    <!-- Russian Cyrillic letter "Я" -->
+    <path d="M320 120 H272 C224 120 192 152 192 196 C192 234 218 262 256 270 L192 390 H240 L298 278 H320 V390 H362 V120 H320 Z M320 236 H272 C246 236 232 220 232 196 C232 170 246 158 272 158 H320 V236 Z" fill="#ffffff"/>
+    <!-- Cute graduation cap or crown star -->
+    <path d="M380 90 L388 110 L408 112 L394 126 L397 146 L380 135 L363 146 L366 126 L352 112 L372 110 Z" fill="url(#gold512)"/>
+  </g>
+</svg>

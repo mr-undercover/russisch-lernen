@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <!-- Decorative badge circle -->
+  <circle cx="96" cy="96" r="68" fill="#ffffff" fill-opacity="0.12"/>
+  <!-- Russian Cyrillic letter "Я" with modern bold typography -->
+  <g filter="url(#shadow)">
+    <path d="M120 46 H102 C84 46 72 58 72 74 C72 88 82 98 96 101 L72 146 H90 L112 104 H120 V146 H136 V46 H120 Z M120 89 H102 C92 89 87 83 87 74 C87 64 92 60 102 60 H120 V89 Z" fill="#ffffff"/>
+    <!-- Small star accent -->
+    <path d="M142 36 L145 43 L152 44 L147 49 L148 56 L142 52 L136 56 L137 49 L132 44 L139 43 Z" fill="url(#gold)"/>
+  </g>
+</svg>
