@@ -462,7 +462,14 @@ class StorageManager {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.COURSE_DATA);
       if (stored) {
-        return JSON.parse(stored);
+        const data = JSON.parse(stored);
+        if (!data || !Array.isArray(data.units)) return DEFAULT_COURSE_DATA;
+        const known = new Set(data.units.map(unit => unit.id));
+        // Merge newly shipped lessons into existing CMS data without replacing user edits.
+        DEFAULT_COURSE_DATA.units.forEach(unit => {
+          if (!known.has(unit.id)) data.units.push(unit);
+        });
+        return data;
       }
     } catch (e) {
       console.error("Error reading stored course data:", e);
@@ -501,7 +508,8 @@ class StorageManager {
 
   getAllVocab() {
     const custom = this.getCustomVocab();
-    return [...VOCAB_DATA, ...custom];
+    // IDs are the stable key across imports and built-in course additions.
+    return [...new Map([...VOCAB_DATA, ...custom].map(vocab => [vocab.id, vocab])).values()];
   }
 }
 

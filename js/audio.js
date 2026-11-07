@@ -116,7 +116,11 @@ class SpeechEngine {
   }
 
   speak(text, customRate = null) {
-    if (!this.enabled || !this.synth) return;
+    if (!this.enabled) return false;
+    if (!this.synth) {
+      if (window.app) window.app.showToast("Dieser Browser unterstützt keine Sprachausgabe. Nutze einen aktuellen Browser mit Web Speech API.", "🔊");
+      return false;
+    }
     try {
       this.synth.cancel(); // Vorherige Sprache abbrechen
       const cleanText = text.replace(/[\(\)\[\]\/]/g, '').trim();
@@ -126,11 +130,25 @@ class SpeechEngine {
 
       if (this.russianVoice) {
         utterance.voice = this.russianVoice;
+      } else if (!this.voiceNoticeShown) {
+        this.voiceNoticeShown = true;
+        if (window.app) window.app.showToast("Keine russische Systemstimme gefunden. Die ru-RU-Systemstimme wird versucht; installiere bei Bedarf ein russisches Sprachpaket.", "🇷🇺");
       }
 
+      utterance.onerror = event => {
+        const reason = event.error || "unbekannter Fehler";
+        console.warn("SpeechSynthesis playback error:", reason);
+        this.lastError = reason;
+        if (window.app) window.app.showToast(`Sprachausgabe fehlgeschlagen (${reason}). Prüfe, ob eine russische Stimme installiert ist.`, "🔊");
+      };
+      utterance.onstart = () => { this.lastError = null; this.lastPlaybackAt = Date.now(); };
+
       this.synth.speak(utterance);
+      return true;
     } catch (e) {
       console.warn("SpeechSynthesis error:", e);
+      if (window.app) window.app.showToast("Die russische Sprachausgabe konnte nicht gestartet werden.", "🔊");
+      return false;
     }
   }
 
@@ -142,5 +160,7 @@ class SpeechEngine {
 }
 
 // Globale Instanzen
-const sfx = new SoundEffects();
-const speech = new SpeechEngine();
+// Consumers use window.sfx/window.speech throughout the app; explicit window
+// assignments are required because top-level `const` declarations are lexical globals.
+window.sfx = new SoundEffects();
+window.speech = new SpeechEngine();

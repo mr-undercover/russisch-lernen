@@ -8,7 +8,7 @@ Eine vollständige, moderne und interaktive Sprachlern-App zum Erlernen der russ
 
 ### 1. 🗺️ Lernpfad & Dashboard („Lernen“)
 - **Geschlängelter Duolingo-Lernpfad**: Zickzack-Knoten mit dynamischen Statusanzeigen (Gesperrt 🔒, Aktiv mit Puls-Animation ⭐, Abgeschlossen mit Haken ✓).
-- **10 strukturierte Lerneinheiten** mit über 30 detailreichen Lektionen:
+- **22 strukturierte Lerneinheiten** mit den bestehenden Kursen und zusätzlichen ausführlichen Lektionen:
   1. *Das russische Alphabet* (Echte Freunde, Falsche Freunde, neue Buchstaben, Zischlaute)
   2. *Erste Wörter & Höflichkeit* (Begrüßung, Danke, Bitte, Pronomen)
   3. *Zahlen und Alltag* (Zahlen 0–100, Wochentage, Tageszeiten)
@@ -19,6 +19,9 @@ Eine vollständige, moderne und interaktive Sprachlern-App zum Erlernen der russ
   8. *Fahrzeuge und Motorsport* (Rennstrecke, Geschwindigkeit, Fahrzeugtechnik, Champion)
   9. *Freizeit, Sport und Musik* (Hobbys, Fußball, Kultur)
   10. *Einkaufen und Alltag* (Farben, Beschreibungen, Geschäfte)
+  11. *Echte Straßensprache & Slang*
+  12. *Chat, Memes & Social Media*
+  13–22. Wohnen, Tagesablauf, Verben, Grammatik, Fälle, Zeitformen, Natur, Gesundheit, Beruf und Urlaub
 - **Dashboard**: Begrüßung nach Tageszeit, Tagesziel-Fortschrittsbalken (z. B. 0/50 XP) und großer „Jetzt weiterlernen“-Button.
 
 ### 2. 🔤 Vollständiger Alphabet-Trainer („Alphabet“)
@@ -80,6 +83,13 @@ Eine vollständige, moderne und interaktive Sprachlern-App zum Erlernen der russ
 - **Synthetisierte Audioeffekte (Web Audio API)**: Soundeffekte (Erfolg, Fehler, Klick, Herzverlust, Fanfare) werden direkt im Browser synthetisiert und benötigen keine externen Audio-Dateien!
 - **Web Speech API (`ru-RU`)**: Authentische Aussprache der russischen Texte.
 
+### 8. 🧠 Adaptive Wiederholung & neue Kurseinheiten
+- Einheiten 13–22 enthalten jeweils drei ausführliche Lektionen mit Wortschatz, Erklärungen und abwechslungsreichen Aufgaben.
+- Fragen werden gewichtigt und ohne Wiederholung innerhalb einer Runde zusammengestellt.
+- Wort und Aufgabentyp werden getrennt bewertet; Fehler senken die Sicherheit und legen eine frühere Wiederholung fest.
+- Sicheres Wissen bekommt längere Wiederholungsabstände. Mit wachsender Sicherheit erscheinen mehr freie Übersetzungen und variierte Antwortmöglichkeiten.
+- Fortschritt bleibt lokal gespeichert und wird im Profil mit Trefferquote, sicher beherrschten Einträgen und Lernniveau angezeigt.
+
 ---
 
 ## 🚀 Schnellstart
@@ -114,10 +124,11 @@ d:\Lern App\
 ├── js/
 │   ├── data-alphabet.js  # Alle 33 russischen Buchstaben mit IPA, Phonetik & Beispielen
 │   ├── data-vocab.js     # 160+ Vokabeln in 15 Kategorien mit Beispielsätzen
-│   ├── data-course.js    # 10 Kurseinheiten, über 30 Lektionen mit Theorie & Quizfragen
+│   ├── data-course.js    # Bestehender Kurs mit Theorie & Quizfragen
 │   ├── audio.js          # Web Audio SFX Synthesizer + Web Speech API (ru-RU)
 │   ├── storage.js        # localStorage-Manager, Gamification, Streaks & CMS-Speicherung
-│   └── app.js            # Haupt-Controller, Navigation, Quiz-Engine, Flashcards, Confetti
+│   ├── app.js            # Haupt-Controller, Navigation, Quiz-Engine, Flashcards, Confetti
+│   └── learning-enhancements.js # Additive Einheiten 13–22 und adaptives Wiederholungssystem
 └── icons/
     ├── icon-192.svg      # PWA App-Icon (192x192)
     └── icon-512.svg      # PWA App-Icon (512x512)

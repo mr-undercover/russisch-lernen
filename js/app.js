@@ -257,6 +257,29 @@ class AppController {
     }
     contentEl.innerHTML = html;
 
+    if (lesson.theory && lesson.theory.examples && lesson.theory.examples.length) {
+      const examplesBox = document.createElement('div');
+      examplesBox.className = 'lesson-examples';
+      const examplesTitle = document.createElement('strong');
+      examplesTitle.textContent = 'Beispielsätze';
+      examplesBox.appendChild(examplesTitle);
+      lesson.theory.examples.forEach(example => {
+        const row = document.createElement('div');
+        row.className = 'lesson-example-row';
+        const text = document.createElement('span');
+        text.innerHTML = `<span lang="ru">${example.ru}</span><br><span>${example.de}</span>`;
+        const speakButton = document.createElement('button');
+        speakButton.type = 'button';
+        speakButton.className = 'btn-speaker lesson-example-speaker';
+        speakButton.textContent = '🔊';
+        speakButton.setAttribute('aria-label', `Beispielsatz auf Russisch anhören: ${example.ru}`);
+        speakButton.onclick = () => window.speech && window.speech.speak(example.ru);
+        row.append(text, speakButton);
+        examplesBox.appendChild(row);
+      });
+      contentEl.appendChild(examplesBox);
+    }
+
     if (lesson.theory && lesson.theory.tip) {
       tipBox.style.display = 'block';
       tipBox.innerHTML = `<strong>💡 Lerntipp:</strong> ${lesson.theory.tip}`;
@@ -378,9 +401,17 @@ class AppController {
       optionsGrid.className = 'options-grid';
 
       ex.options.forEach((optText, optIdx) => {
+        const optionRow = document.createElement('div');
+        optionRow.className = 'option-choice-row';
         const optBtn = document.createElement('button');
         optBtn.className = 'option-btn';
-        optBtn.innerHTML = `<span style="opacity: 0.6; font-size: 0.85rem;">${optIdx + 1}</span> <span>${optText}</span>`;
+        const number = document.createElement('span');
+        number.style.opacity = '0.6';
+        number.style.fontSize = '0.85rem';
+        number.textContent = String(optIdx + 1);
+        const answerText = document.createElement('span');
+        answerText.textContent = optText;
+        optBtn.append(number, answerText);
 
         optBtn.onclick = () => {
           if (quiz.isAnswerChecked) return;
@@ -390,10 +421,52 @@ class AppController {
           quiz.selectedAnswer = optIdx;
         };
 
-        optionsGrid.appendChild(optBtn);
+        optionRow.appendChild(optBtn);
+        if (/[А-Яа-яЁё]/.test(optText) && window.speech) {
+          const russianOptionText = optText.split(/\s*[\(–—]/)[0].trim();
+          const optionSpeaker = document.createElement('button');
+          optionSpeaker.type = 'button';
+          optionSpeaker.className = 'btn-speaker option-speaker';
+          optionSpeaker.textContent = '🔊';
+          optionSpeaker.title = `Russisch anhören: ${russianOptionText}`;
+          optionSpeaker.setAttribute('aria-label', `Russisch anhören: ${russianOptionText}`);
+          optionSpeaker.onclick = event => { event.stopPropagation(); window.speech.speak(russianOptionText); };
+          optionRow.appendChild(optionSpeaker);
+        }
+        optionsGrid.appendChild(optionRow);
       });
 
       quizBody.appendChild(optionsGrid);
+    }
+    else if (ex.type === 'translation_input') {
+      if (ex.inputLanguage === 'Deutsch' && ex.audioText && window.speech) {
+        const audioBox = document.createElement('div');
+        audioBox.className = 'prompt-audio-box';
+        const speakerBtn = document.createElement('button');
+        speakerBtn.type = 'button';
+        speakerBtn.className = 'btn-speaker';
+        speakerBtn.textContent = '🔊';
+        speakerBtn.setAttribute('aria-label', 'Russischen Ausdruck anhören');
+        speakerBtn.onclick = () => window.speech.speak(ex.audioText);
+        const promptText = document.createElement('span');
+        promptText.className = 'prompt-audio-text';
+        promptText.lang = 'ru';
+        promptText.textContent = ex.audioText;
+        audioBox.append(speakerBtn, promptText);
+        quizBody.appendChild(audioBox);
+      }
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'editor-input translation-answer-input';
+      input.autocomplete = 'off';
+      input.autocapitalize = 'off';
+      input.spellcheck = false;
+      input.placeholder = `${ex.inputLanguage || 'Russisch'}-Übersetzung eingeben`;
+      input.setAttribute('aria-label', `${ex.inputLanguage || 'Russische'} Übersetzung`);
+      input.addEventListener('input', () => { quiz.selectedAnswer = input.value; });
+      input.addEventListener('keydown', event => { if (event.key === 'Enter' && !quiz.isAnswerChecked) this.handleQuizCheck(); });
+      quizBody.appendChild(input);
+      setTimeout(() => input.focus(), 0);
     }
     // B. Matching (Wortpaare verbinden)
     else if (ex.type === 'matching') {
@@ -436,6 +509,17 @@ class AppController {
         } else {
           // Falsch
           if (window.sfx) window.sfx.playWrong();
+          if (!ex.matchingMistakeRecorded) {
+            ex.matchingMistakeRecorded = true;
+            quiz.mistakeCount++;
+            if (!quiz.isHeartRefill) {
+              storage.loseHeart();
+              this.updateHeaderStats();
+              const quizHeartsVal = document.getElementById('quizHeartsVal');
+              if (quizHeartsVal) quizHeartsVal.textContent = storage.userData.hearts;
+            }
+            if (window.adaptiveLearning) window.adaptiveLearning.record(ex, false);
+          }
           const el1 = selectedLeft;
           const el2 = selectedRight;
           el1.classList.add('error-shake');
@@ -571,6 +655,13 @@ class AppController {
         return;
       }
       isCorrect = (quiz.selectedAnswer === ex.correctIndex);
+    } else if (ex.type === 'translation_input') {
+      if (!quiz.selectedAnswer || !quiz.selectedAnswer.trim()) {
+        this.showToast("Gib bitte eine Übersetzung ein.", "⌨️");
+        return;
+      }
+      const normalize = value => value.normalize('NFC').replace(/[.,?!]/g, '').replace(/ё/g, 'е').replace(/\s+/g, ' ').trim().toLocaleLowerCase('ru-RU');
+      isCorrect = normalize(quiz.selectedAnswer) === normalize(ex.translationTarget);
     } else if (ex.type === 'matching') {
       if (quiz.selectedAnswer !== true) {
         this.showToast("Bitte verbinde zuerst alle Wortpaare!", "👆");
@@ -621,6 +712,8 @@ class AppController {
         solutionText = `Richtige Antwort: ${ex.options[ex.correctIndex]}`;
       } else if (ex.targetSentence) {
         solutionText = `Richtige Lösung: ${ex.targetSentence}`;
+      } else if (ex.translationTarget) {
+        solutionText = `Richtige Lösung: ${ex.translationTarget}`;
       }
       feedbackExplanation.textContent = `${solutionText}. ${ex.explanation || ''}`;
       btnAction.className = 'btn-3d btn-danger';
@@ -1390,8 +1483,8 @@ class AppController {
     if (btnTestVoice) {
       btnTestVoice.onclick = () => {
         if (window.speech) {
-          window.speech.speak("Здравствуйте! Привет, друг!");
-          this.showToast("Sprachausgabe: 'Здравствуйте! Привет, друг!'", "🔊");
+          const started = window.speech.speak("Здравствуйте! Привет, друг!");
+          if (started) this.showToast("Sprachausgabe: 'Здравствуйте! Привет, друг!'", "🔊");
         }
       };
     }
@@ -1485,11 +1578,11 @@ class AppController {
     const voiceStatusText = document.getElementById('voiceStatusText');
     if (voiceStatusText) {
       if (window.speech && window.speech.hasRussianVoice) {
-        voiceStatusText.textContent = "🇷🇺 Aktiv (ru-RU)";
+        voiceStatusText.textContent = "🇷🇺 ru-RU-Stimme verfügbar";
         voiceStatusText.style.color = "var(--success-dark)";
       } else {
-        voiceStatusText.textContent = "Standard / Phonetik";
-        voiceStatusText.style.color = "var(--text-muted)";
+        voiceStatusText.textContent = window.speech && window.speech.synth ? "ru-RU-Systemstimme wird versucht" : "Sprachausgabe nicht verfügbar";
+        voiceStatusText.style.color = "var(--warning)";
       }
     }
   }

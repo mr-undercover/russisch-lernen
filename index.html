@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="app">
+  <div id="appRoot">
     <!-- Sticky App Header -->
     <header class="app-header">
       <div class="header-brand">
@@ -315,6 +315,18 @@
             <div class="stat-box-label">Vokabeln gelernt</div>
           </div>
         </div>
+
+        <h3 class="section-title">📈 Lernstatistik & persönliche Wiederholung</h3>
+        <div class="stats-grid adaptive-stats-grid" id="adaptiveStatsGrid" aria-live="polite">
+          <div class="stat-box"><div class="stat-box-val" id="adaptiveMastered">0</div><div class="stat-box-label">Sicher beherrscht</div></div>
+          <div class="stat-box"><div class="stat-box-val" id="adaptiveAttempts">0</div><div class="stat-box-label">Antworten gesamt</div></div>
+          <div class="stat-box"><div class="stat-box-val" id="adaptiveAccuracy">—</div><div class="stat-box-label">Trefferquote</div></div>
+          <div class="stat-box"><div class="stat-box-val" id="adaptiveCorrect">0</div><div class="stat-box-label">Richtig</div></div>
+          <div class="stat-box"><div class="stat-box-val" id="adaptiveWrong">0</div><div class="stat-box-label">Falsch</div></div>
+          <div class="stat-box"><div class="stat-box-val" id="adaptiveLevel">1</div><div class="stat-box-label">Lernniveau</div></div>
+        </div>
+        <div class="adaptive-trend-card"><div class="adaptive-trend-heading">Letzte Antworten</div><div class="adaptive-trend" id="adaptiveTrend" role="img" aria-label="Noch keine Antwortdaten"></div></div>
+        <div class="adaptive-review-note" id="adaptiveReviewNote">Wörter und Aufgabentypen werden getrennt bewertet und passend zum Wiederholungszeitpunkt eingeplant.</div>
 
         <!-- XP-Belohnungsshop & Inventar -->
         <h3 class="section-title">🛍️ XP-Belohnungsshop & Booster</h3>
@@ -800,6 +812,7 @@
   <script src="js/audio.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/learning-enhancements.js"></script>
 
   <!-- Service Worker Registrierung -->
   <script>

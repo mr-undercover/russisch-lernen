@@ -111,7 +111,7 @@ input, textarea, .selectable-text {
 }
 
 /* App-Container */
-#app {
+#appRoot {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -842,6 +842,25 @@ input, textarea, .selectable-text {
   margin-bottom: 24px;
 }
 
+.adaptive-review-note {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin: -12px 0 24px;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+.adaptive-trend-card { background: var(--bg-card); border: 2px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; margin: -12px 0 24px; }
+.adaptive-trend-heading { color: var(--text-secondary); font-size: .82rem; font-weight: 700; margin-bottom: 8px; }
+.adaptive-trend { height: 46px; display: flex; align-items: flex-end; gap: 5px; }
+.adaptive-trend span { flex: 1; max-width: 24px; border-radius: 4px 4px 1px 1px; }
+.adaptive-trend .trend-correct { background: var(--success); }
+.adaptive-trend .trend-wrong { background: var(--danger); }
+.unit-progress-label { font-size: .78rem; font-weight: 700; opacity: .92; margin-top: 5px; text-align: right; }
+.translation-answer-input { margin-top: 14px; font-size: 1.15rem; }
+
 .stat-box {
   background-color: var(--bg-card);
   border: 2px solid var(--border-color);
@@ -1150,6 +1169,9 @@ input:checked + .slider:before {
   gap: 12px;
   margin-top: 10px;
 }
+.option-choice-row { display: flex; align-items: stretch; gap: 8px; }
+.option-choice-row .option-btn { flex: 1; min-width: 0; }
+.btn-speaker.option-speaker { width: 42px; height: auto; min-height: 42px; margin: 0; font-size: 1rem; align-self: center; }
 
 .option-btn {
   display: flex;
@@ -1395,6 +1417,10 @@ input:checked + .slider:before {
   font-weight: 500;
   margin-bottom: 20px;
 }
+.lesson-examples { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
+.lesson-example-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--bg-subtle); border-radius: var(--radius-sm); line-height: 1.45; }
+.lesson-example-row [lang="ru"] { font-family: var(--font-cyrillic); color: var(--text-primary); font-weight: 800; }
+.lesson-example-speaker { width: 38px; height: 38px; margin: 0; font-size: 1rem; }
 
 /* ==========================================================================
    CELEBRATION / ERFOLGS-MODAL (Nach Lektionsabschluss)
