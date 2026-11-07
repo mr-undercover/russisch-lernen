@@ -3,12 +3,28 @@
   const get = id => document.getElementById(id);
   const status = () => get('accountStatus');
   const say = message => { if (status()) status().textContent = message; };
+  const authRedirectUrl = () => location.origin + location.pathname;
+  const describeAuthError = error => {
+    const code = String(error?.code || error?.error_code || '').toLowerCase();
+    const message = String(error?.message || error?.error_description || 'Unbekannter Fehler');
+    if (code.includes('email_not_confirmed') || /email not confirmed/i.test(message)) return 'Diese E-Mail ist noch nicht bestätigt. Fordere unten eine neue Bestätigungs-E-Mail an und öffne den neuesten Link.';
+    if (code.includes('otp_expired') || /expired|invalid.*link|invalid.*token/i.test(message)) return 'Der Bestätigungslink ist abgelaufen oder wurde bereits verwendet. Fordere eine neue Bestätigungs-E-Mail an.';
+    return message;
+  };
   const configured = /^https:\/\/.+\.supabase\.co$/.test(cfg.url || '') && !!cfg.anonKey;
   if (!configured || !window.supabase?.createClient) {
     say('Supabase-Konfiguration oder Client-Bibliothek fehlt.');
     return;
   }
   const client = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+  // Supabase redirects failed/expired confirmation links back to the app with
+  // an error in the query string or URL fragment. Surface that instead of
+  // leaving the user on an apparently unchanged account screen.
+  for (const raw of [location.search, location.hash.slice(1)]) {
+    const params = new URLSearchParams(raw);
+    const error = params.get('error_description') || params.get('error');
+    if (error) say(describeAuthError({ error_code: params.get('error_code'), error_description: error }));
+  }
   const state = window.accountSync = { client, user:null, timer:0, syncing:false, loading:false };
   const userKey = id => `russisch_progress_${id}`;
   const pendingKey = id => `russisch_pending_${id}`;
@@ -166,13 +182,26 @@
     finally { get('accountImportLocal').disabled=false; }
   };
   get('accountSignUp').onclick=async()=>{
-    const {data,error}=await client.auth.signUp({email:get('accountEmail').value.trim(),password:get('accountPassword').value,options:{data:{username:get('accountUsername').value.trim()},emailRedirectTo:location.origin+location.pathname}});
-    if(error)return say(`Registrierung fehlgeschlagen: ${error.message}`);
-    if(data.session)await load(data.user);else say('Bitte bestätige deine E-Mail. Danach kannst du dich anmelden.');
+    const email=get('accountEmail').value.trim();
+    if(!email)return say('Bitte gib zuerst deine E-Mail-Adresse ein.');
+    const {data,error}=await client.auth.signUp({email,password:get('accountPassword').value,options:{data:{username:get('accountUsername').value.trim()},emailRedirectTo:authRedirectUrl()}});
+    if(error)return say(`Registrierung fehlgeschlagen: ${describeAuthError(error)}`);
+    if(data.session)await load(data.user);else say('Konto angelegt. Bitte öffne den neuesten Bestätigungslink in deiner E-Mail (auch Spam prüfen). Falls keine E-Mail kommt, nutze „Bestätigungs-E-Mail erneut senden“.');
   };
   get('accountSignIn').onclick=async()=>{
     const {data,error}=await client.auth.signInWithPassword({email:get('accountEmail').value.trim(),password:get('accountPassword').value});
-    if(error)return say(`Anmeldung fehlgeschlagen: ${error.message}`); await load(data.user);
+    if(error)return say(`Anmeldung fehlgeschlagen: ${describeAuthError(error)}`); await load(data.user);
+  };
+  get('accountResendConfirmation').onclick=async()=>{
+    const email=get('accountEmail').value.trim();
+    if(!email)return say('Trage zuerst die E-Mail-Adresse ein, für die du die Bestätigung erneut anfordern möchtest.');
+    const button=get('accountResendConfirmation'); button.disabled=true;
+    try {
+      const {error}=await client.auth.resend({type:'signup',email,options:{emailRedirectTo:authRedirectUrl()}});
+      if(error)throw error;
+      say('Falls für diese Adresse ein unbestätigtes Konto existiert, wurde eine neue Bestätigungs-E-Mail gesendet. Prüfe auch den Spam-Ordner und verwende den neuesten Link.');
+    } catch(error) { say(`Bestätigungs-E-Mail konnte nicht angefordert werden: ${describeAuthError(error)}`); }
+    finally { button.disabled=false; }
   };
   get('accountSaveProfile').onclick=async()=>{
     if(!state.user)return say('Melde dich zuerst an.');
@@ -182,7 +211,7 @@
   get('accountSignOut').onclick=async()=>{const {error}=await client.auth.signOut();if(error)return say(`Abmeldung fehlgeschlagen: ${error.message}`);await load(null);};
   get('accountResetPassword').onclick=async()=>{
     const email=get('accountEmail').value.trim(); if(!email)return say('Trage zuerst deine E-Mail-Adresse ein.');
-    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl()});
     say(error?`Zurücksetzen fehlgeschlagen: ${error.message}`:'Falls ein Konto existiert, wurde ein Link zum Zurücksetzen gesendet.');
   };
   get('accountSetNewPassword').onclick=async()=>{

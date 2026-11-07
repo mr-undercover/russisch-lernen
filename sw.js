@@ -1,5 +1,5 @@
 // Service Worker for Russisch Lernen App
-const CACHE_NAME = 'russisch-app-v8';
+const CACHE_NAME = 'russisch-app-v9';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
