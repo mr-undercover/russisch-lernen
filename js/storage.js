@@ -221,6 +221,7 @@ class StorageManager {
   }
 
   addXp(baseAmount) {
+    if (window.accountSync?.user && !this.demoMode) return { earned: 0, isBoosted: false, serverManaged: true };
     let finalAmount = baseAmount;
     if (this.isBoosterActive()) {
       finalAmount = baseAmount * 2;
@@ -244,6 +245,7 @@ class StorageManager {
   }
 
   loseHeart() {
+    if (window.accountSync?.user && !this.demoMode) return this.userData.hearts;
     // Prüfe Herz-Schutzschild
     if (this.userData.inventory?.shieldActive) {
       this.userData.inventory.shieldActive = false;
@@ -262,6 +264,7 @@ class StorageManager {
   }
 
   refillHearts(amount = 5) {
+    if (window.accountSync?.user && !this.demoMode) return this.userData.hearts;
     this.userData.hearts = Math.min(this.userData.maxHearts, this.userData.hearts + amount);
     this.saveUserData();
     this.unlockAchievement("heart_healer");
@@ -332,6 +335,7 @@ class StorageManager {
 
   // XP-Belohnungsshop Kaufen
   buyShopItem(itemId, cost) {
+    if (window.accountSync?.user && !this.demoMode) return { success:false, reason:'Käufe müssen über das sichere Konto erfolgen.' };
     this.userData.inventory.purchasedItems ||= [];
     this.userData.inventory.equippedItems ||= { avatar:'👨‍🚀', frame:'', theme:'' };
     const catalogItem = XP_SHOP_ITEMS.find(item => item.id === itemId);
@@ -372,6 +376,7 @@ class StorageManager {
   }
 
   equipShopItem(itemId) {
+    if (window.accountSync?.user && !this.demoMode) return false;
     const item = XP_SHOP_ITEMS.find(entry => entry.id === itemId);
     if (!item || !(this.userData.inventory.purchasedItems || []).includes(itemId)) return false;
     this.userData.inventory.equippedItems ||= {};
@@ -458,8 +463,10 @@ class StorageManager {
       this.userData.achievements.push(achId);
       const ach = ACHIEVEMENTS_LIST.find(a => a.id === achId);
       const reward = ach?.rarity === 'legendär' ? 100 : ach?.rarity === 'episch' ? 50 : ach?.rarity === 'selten' ? 30 : 15;
-      this.userData.xp += reward;
-      this.userData.stats.totalXpEarned = (this.userData.stats.totalXpEarned || 0) + reward;
+      if (!(window.accountSync?.user && !this.demoMode)) {
+        this.userData.xp += reward;
+        this.userData.stats.totalXpEarned = (this.userData.stats.totalXpEarned || 0) + reward;
+      }
       this.saveUserData();
       if (window.showAchievementToast) {
         if (ach) window.showAchievementToast(ach);

@@ -164,6 +164,7 @@
               <button class="btn-ghost" id="btnFilterFavorites" style="font-size: 0.82rem;">❤️ Nur Favoriten</button>
             </div>
           </div>
+          <p class="pronunciation-guide">Großbuchstaben markieren die Betonung. <b>zh</b> klingt wie stimmhaftes „sch“ (wie j in „Journal“), <b>sch</b> wie „sch“, <b>schtsch</b> wie щ, <b>ch</b> wie in „Bach“, <b>y</b> ist der dunkle ы-Laut; ein Apostroph markiert einen weichen Konsonanten.</p>
           <div class="vocab-list" id="vocabListItems">
             <!-- Dynamisch generiert -->
           </div>
@@ -181,7 +182,7 @@
               <div class="flashcard-face flashcard-front">
                 <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; font-weight: 700;" id="cardFrontCategory">KATEGORIE</div>
                 <div class="vocab-ru-word" style="font-size: 2.2rem; margin-bottom: 8px;" id="cardFrontRussian">Привет</div>
-                <div class="vocab-phonetic" style="font-size: 1.1rem; margin-bottom: 14px;" id="cardFrontTranslit">Priwét</div>
+                <div class="vocab-phonetic" style="font-size: 1.1rem; margin-bottom: 14px;" id="cardFrontTranslit">Aussprache: Priwét</div>
                 <button class="btn-speaker" id="cardFrontSpeaker" style="margin-right: 0;">🔊</button>
                 <div style="margin-top: 20px; font-size: 0.8rem; color: var(--text-muted);">Tippe auf die Karte zum Umdrehen</div>
               </div>
@@ -192,6 +193,7 @@
                 <div style="background-color: var(--bg-card); border-radius: var(--radius-md); padding: 12px; border: 1.5px solid var(--border-color); width: 100%; text-align: left; margin-bottom: 10px;">
                   <div style="font-weight: 700; font-size: 0.9rem; font-family: var(--font-cyrillic);" id="cardBackExampleRu">Привет, как дела?</div>
                   <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;" id="cardBackExampleDe">Hallo, wie geht's?</div>
+                  <button class="btn-ghost icon-action-btn" id="cardBackExampleSpeaker" type="button" aria-label="Russischen Beispielsatz anhören">🔊 Beispielsatz anhören</button>
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-muted);">Tippe erneut zum Zurückdrehen</div>
               </div>
@@ -460,9 +462,11 @@
             <div class="editor-form-group"><label>Benutzername</label><input class="editor-input" type="text" id="accountUsername" autocomplete="nickname" maxlength="30"></div>
             <div class="editor-form-group"><label>E-Mail</label><input class="editor-input" type="email" id="accountEmail" autocomplete="email"></div>
             <div class="editor-form-group"><label>Passwort</label><input class="editor-input" type="password" id="accountPassword" autocomplete="current-password"></div>
+            <div class="editor-form-group"><label>Neues Passwort (nach Reset-Link)</label><input class="editor-input" type="password" id="accountNewPassword" autocomplete="new-password"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn-ghost" id="accountSignUp">Registrieren</button><button class="btn-ghost" id="accountSignIn">Anmelden</button>
               <button class="btn-ghost" id="accountSaveProfile">Benutzername speichern</button>
+              <button class="btn-ghost" id="accountSetNewPassword" type="button" hidden>Neues Passwort speichern</button>
               <button class="btn-ghost" id="accountResetPassword">Passwort zurücksetzen</button><button class="btn-ghost" id="accountSignOut">Abmelden</button>
             </div><div id="accountStatus" role="status" style="margin-top:8px;font-size:.85rem">Lokaler Lernstand aktiv</div>
             <button class="btn-ghost" id="accountImportLocal" type="button" hidden>Lokalen Lernstand in dieses Konto übernehmen</button>
@@ -602,6 +606,7 @@
           <div class="feedback-text">
             <h4 id="feedbackTitle">Richtig!</h4>
             <p id="feedbackExplanation">Erklärung</p>
+            <button class="btn-ghost icon-action-btn" id="feedbackExampleSpeaker" type="button" aria-label="Russischen Beispielsatz anhören" hidden>🔊 Beispielsatz anhören</button>
           </div>
         </div>
         <button class="btn-3d btn-primary" id="btnQuizAction">
@@ -837,6 +842,7 @@
   <script src="js/audio.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/data-vocab-enrichment.js"></script>
   <script src="js/learning-enhancements.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js"></script>

@@ -306,6 +306,32 @@ class AppController {
       contentEl.appendChild(examplesBox);
     }
 
+    if (lesson.theory?.vocabulary?.length) {
+      const vocabularyBox = document.createElement('section');
+      vocabularyBox.className = 'lesson-vocab-examples';
+      const heading = document.createElement('h4');
+      heading.textContent = 'Wörter mit Aussprache und Beispielen';
+      vocabularyBox.appendChild(heading);
+      lesson.theory.vocabulary.forEach(vocab => {
+        const row = document.createElement('article'); row.className = 'lesson-vocab-example-row';
+        const wordLine = document.createElement('div'); wordLine.className = 'lesson-vocab-word-line';
+        const word = document.createElement('strong'); word.lang = 'ru'; word.textContent = vocab.russian;
+        const pronunciation = document.createElement('span'); pronunciation.className = 'lesson-vocab-pronunciation'; pronunciation.textContent = vocab.translit;
+        const wordAudio = document.createElement('button'); wordAudio.type = 'button'; wordAudio.className = 'btn-ghost icon-action-btn';
+        wordAudio.textContent = '🔊'; wordAudio.setAttribute('aria-label', `${vocab.russian} anhören`); wordAudio.onclick = () => window.speech?.speak(vocab.russian);
+        wordLine.append(word, pronunciation, wordAudio);
+        const translation = document.createElement('div'); translation.className = 'lesson-vocab-translation'; translation.textContent = vocab.german;
+        const exampleLine = document.createElement('div'); exampleLine.className = 'lesson-vocab-example-text';
+        const example = document.createElement('span'); example.lang = 'ru'; example.textContent = vocab.exampleRu;
+        const exampleAudio = document.createElement('button'); exampleAudio.type = 'button'; exampleAudio.className = 'btn-ghost icon-action-btn';
+        exampleAudio.textContent = '🔊'; exampleAudio.setAttribute('aria-label', 'Russischen Beispielsatz anhören'); exampleAudio.onclick = () => window.speech?.speak(vocab.exampleRu);
+        exampleLine.append(example, exampleAudio);
+        const exampleTranslation = document.createElement('div'); exampleTranslation.className = 'lesson-vocab-translation'; exampleTranslation.textContent = vocab.exampleDe;
+        row.append(wordLine, translation, exampleLine, exampleTranslation); vocabularyBox.appendChild(row);
+      });
+      contentEl.appendChild(vocabularyBox);
+    }
+
     if (lesson.theory && lesson.theory.tip) {
       tipBox.style.display = 'block';
       tipBox.innerHTML = `<strong>💡 Lerntipp:</strong> ${lesson.theory.tip}`;
@@ -341,8 +367,17 @@ class AppController {
       lessonId: options.lessonId || null,
       xpReward: options.xpReward || 25,
       isHeartRefill: options.isHeartRefill || false,
+      matchAnswers: [],
+      serverSessionId: null,
       title: options.title || "Lektion"
     };
+    const quiz = this.currentQuiz;
+    if (window.accountSync?.user && !storage.demoMode) {
+      const mode = quiz.isHeartRefill ? 'heart_refill' : 'practice';
+      quiz.serverSessionPromise = window.accountSync.beginSession(exerciseList, quiz.lessonId, mode)
+        .then(id => { if (this.currentQuiz === quiz) quiz.serverSessionId = id; return id; })
+        .catch(error => { console.error('Verified quiz session unavailable', error); if (this.currentQuiz === quiz) this.showToast('Diese Runde läuft lokal; XP werden erst nach Serverprüfung gutgeschrieben.', '☁️'); return null; });
+    }
 
     const quizModal = document.getElementById('quizModal');
     quizModal.classList.add('active');
@@ -372,12 +407,14 @@ class AppController {
     const quizHeartsVal = document.getElementById('quizHeartsVal');
     const quizFooter = document.getElementById('quizFooter');
     const feedbackMsg = document.getElementById('feedbackMsg');
+    const feedbackExampleSpeaker = document.getElementById('feedbackExampleSpeaker');
     const btnAction = document.getElementById('btnQuizAction');
     const actionText = document.getElementById('quizActionText');
 
     // Reset Footer State
     quizFooter.className = 'quiz-footer';
     feedbackMsg.style.display = 'none';
+    feedbackExampleSpeaker.hidden = true;
     quiz.isAnswerChecked = false;
     quiz.selectedAnswer = null;
     actionText.textContent = "Überprüfen";
@@ -514,6 +551,7 @@ class AppController {
       let selectedRight = null;
       let matchedPairsCount = 0;
 
+      quiz.matchAnswers ||= [];
       const checkMatch = () => {
         if (!selectedLeft || !selectedRight) return;
         const leftPairId = parseInt(selectedLeft.getAttribute('data-pair-id'));
@@ -527,6 +565,7 @@ class AppController {
           selectedLeft.classList.add('matched');
           selectedRight.classList.add('matched');
           matchedPairsCount++;
+          quiz.matchAnswers.push({ left:selectedLeft.textContent, right:selectedRight.textContent });
 
           if (matchedPairsCount === pairs.length) {
             quiz.selectedAnswer = true;
@@ -538,6 +577,12 @@ class AppController {
           if (!ex.matchingMistakeRecorded) {
             ex.matchingMistakeRecorded = true;
             quiz.mistakeCount++;
+            if (window.accountSync?.user && !storage.demoMode && quiz.serverSessionPromise) {
+              void (async()=>{
+                try { const sessionId=quiz.serverSessionId||await quiz.serverSessionPromise; if(sessionId) await window.accountSync.recordMistake(sessionId); }
+                catch(error) { console.error('Could not record matching mistake',error); this.showToast('Fehler konnte nicht synchronisiert werden.', '☁️'); }
+              })();
+            }
             if (!quiz.isHeartRefill) {
               storage.loseHeart();
               this.updateHeaderStats();
@@ -659,9 +704,9 @@ class AppController {
     }
   }
 
-  handleQuizCheck() {
+  async handleQuizCheck() {
     const quiz = this.currentQuiz;
-    if (!quiz) return;
+    if (!quiz || quiz.isChecking || quiz.isAnswerChecked) return;
 
     const ex = quiz.exercises[quiz.currentIndex];
     const quizFooter = document.getElementById('quizFooter');
@@ -669,6 +714,7 @@ class AppController {
     const feedbackIcon = document.getElementById('feedbackIcon');
     const feedbackTitle = document.getElementById('feedbackTitle');
     const feedbackExplanation = document.getElementById('feedbackExplanation');
+    const feedbackExampleSpeaker = document.getElementById('feedbackExampleSpeaker');
     const actionText = document.getElementById('quizActionText');
     const btnAction = document.getElementById('btnQuizAction');
 
@@ -702,6 +748,28 @@ class AppController {
       const cleanInput = quiz.selectedAnswer.replace(/[\.\,\?\!]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
       const cleanTarget = ex.targetSentence.replace(/[\.\,\?\!]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
       isCorrect = (cleanInput === cleanTarget);
+    }
+
+    if (window.accountSync?.user && !storage.demoMode && quiz.serverSessionPromise) {
+      quiz.isChecking = true;
+      try {
+        const sessionId = quiz.serverSessionId || await quiz.serverSessionPromise;
+        if (sessionId) {
+          let submitted;
+          if (ex.type === 'matching') submitted = { pairs: quiz.matchAnswers || [] };
+          else if (ex.type === 'translation_input' || ex.type === 'sentence_build') submitted = { value: quiz.selectedAnswer };
+          else submitted = { value: ex.options?.[quiz.selectedAnswer] ?? '' };
+          isCorrect = await window.accountSync.submitAnswer(sessionId, ex, submitted);
+        } else {
+          this.showToast('Serverprüfung nicht verfügbar. Diese Runde gibt keine XP.', '☁️');
+        }
+      } catch (error) {
+        console.error('Answer verification failed', error);
+        this.showToast('Antwort konnte nicht serverseitig geprüft werden. Bitte Verbindung prüfen.', '⚠️');
+        quiz.isChecking = false;
+        return;
+      }
+      quiz.isChecking = false;
     }
 
     quiz.isAnswerChecked = true;
@@ -744,6 +812,12 @@ class AppController {
       feedbackExplanation.textContent = `${solutionText}. ${ex.explanation || ''}`;
       btnAction.className = 'btn-3d btn-danger';
     }
+    if (ex.vocabularyInfo) {
+      const vocab = ex.vocabularyInfo;
+      feedbackExplanation.textContent += `\n${vocab.russian} (${vocab.translit}) — ${vocab.german}\n${vocab.exampleRu}\n${vocab.exampleDe}`;
+      feedbackExampleSpeaker.hidden = false;
+      feedbackExampleSpeaker.onclick = () => window.speech?.speak(vocab.exampleRu);
+    } else feedbackExampleSpeaker.hidden = true;
     storage.recordAnswer(isCorrect);
 
     feedbackMsg.style.display = 'flex';
@@ -765,7 +839,7 @@ class AppController {
     this.renderCurrentQuizExercise();
   }
 
-  finishQuiz() {
+  async finishQuiz() {
     const quiz = this.currentQuiz;
     if (!quiz) return;
 
@@ -777,13 +851,30 @@ class AppController {
     if (isPerfect) baseEarnedXp += 10;
 
     // Herzen auffüllen im Refill-Modus
-    if (quiz.isHeartRefill) {
+    if (quiz.isHeartRefill && !(window.accountSync?.user && !storage.demoMode)) {
       storage.refillHearts(5);
       baseEarnedXp = 20;
     }
 
     // Fortschritt speichern (berücksichtigt ggf. 2x Booster)
-    const xpResult = storage.addXp(baseEarnedXp);
+    let xpResult;
+    if (window.accountSync?.user && !storage.demoMode) {
+      const sessionId = quiz.serverSessionId || (quiz.serverSessionPromise ? await quiz.serverSessionPromise : null);
+      if (sessionId) {
+        try {
+          const serverResult = await window.accountSync.finishSession(sessionId);
+          xpResult = { earned: serverResult.xp_awarded, isBoosted: !!serverResult.is_boosted };
+        } catch (error) {
+          console.error('Session could not be verified', error);
+          xpResult = { earned: 0, isBoosted: false };
+          this.showToast('XP konnten nicht bestätigt werden. Dein Übungsfortschritt bleibt erhalten.', '☁️');
+        }
+      } else {
+        xpResult = { earned: 0, isBoosted: false };
+      }
+    } else {
+      xpResult = storage.addXp(baseEarnedXp);
+    }
 
     if (quiz.lessonId) {
       storage.completeLesson(quiz.lessonId, isPerfect ? 100 : 80, isPerfect);
@@ -965,7 +1056,7 @@ class AppController {
         const others = ALPHABET_DATA.filter(l => l.id !== letItem.id).sort(() => Math.random() - 0.5).slice(0, 3);
         const allOpts = [letItem.name, ...others.map(o => o.name)].sort(() => Math.random() - 0.5);
         exercises.push({
-          id: `alpha_rec_${i}`,
+          id: `alpha_rec_${letItem.id}`,
           type: "choice_ru_de",
           question: `Welcher Name/Laut gehört zum Buchstaben '${letItem.upper}'?`,
           audioText: letItem.upper,
@@ -979,7 +1070,7 @@ class AppController {
         const others = ALPHABET_DATA.filter(l => l.id !== letItem.id).sort(() => Math.random() - 0.5).slice(0, 3);
         const allOpts = [letItem.upper, ...others.map(o => o.upper)].sort(() => Math.random() - 0.5);
         exercises.push({
-          id: `alpha_sound_${i}`,
+          id: `alpha_sound_${letItem.id}`,
           type: "choice_ru_de",
           question: `Welcher Buchstabe erzeugt diesen Laut: "${letItem.germanPhonetic}"?`,
           audioText: letItem.upper,
@@ -994,14 +1085,15 @@ class AppController {
         id: "alpha_match_1",
         type: "matching",
         question: "Verbinde die Großbuchstaben mit den passenden Kleinbuchstaben:",
-        pairs: selected.map(l => ({ left: l.upper, right: l.lower }))
+        pairs: selected.map(l => ({ left: l.upper, right: l.lower })),
+        learningQuestions: selected.map(l => ({ id:`alpha_match:${l.id}`, left:l.upper, right:l.lower }))
       });
     } else if (mode === 'read_words') {
       letters.slice(0, 5).forEach((letItem, i) => {
         const others = ALPHABET_DATA.filter(l => l.id !== letItem.id).sort(() => Math.random() - 0.5).slice(0, 3);
         const allOpts = [letItem.exampleTranslation, ...others.map(o => o.exampleTranslation)].sort(() => Math.random() - 0.5);
         exercises.push({
-          id: `alpha_read_${i}`,
+          id: `alpha_read_${letItem.id}`,
           type: "choice_ru_de",
           question: `Lies das Wort: '${letItem.exampleWord}' (${letItem.exampleTranslit}). Was bedeutet es?`,
           audioText: letItem.exampleWord,
@@ -1114,6 +1206,11 @@ class AppController {
       const currentVocab = this.flashcards[this.currentFlashcardIdx];
       if (currentVocab && window.speech) window.speech.speak(currentVocab.russian);
     };
+    document.getElementById('cardBackExampleSpeaker').onclick = (e) => {
+      e.stopPropagation();
+      const currentVocab = this.flashcards[this.currentFlashcardIdx];
+      if (currentVocab?.exampleRu && window.speech) window.speech.speak(currentVocab.exampleRu);
+    };
 
     document.getElementById('btnCardMistake').onclick = () => {
       const currentVocab = this.flashcards[this.currentFlashcardIdx];
@@ -1208,7 +1305,7 @@ class AppController {
               <span>${vocab.russian}</span>
               <button class="btn-ghost icon-action-btn btn-play-audio" title="Anhören">🔊</button>
             </div>
-            <div class="vocab-phonetic">${vocab.translit || ''}</div>
+            <div class="vocab-phonetic">Aussprache: ${vocab.translit || ''}</div>
           </div>
           <div class="vocab-actions">
             <button class="icon-action-btn btn-fav ${isFav ? 'active-favorite' : ''}" title="Zu Favoriten">
@@ -1219,7 +1316,7 @@ class AppController {
         <div class="vocab-de-word">${vocab.german}</div>
         ${vocab.exampleRu ? `
           <div class="vocab-example">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="font-weight: 600; font-family: var(--font-cyrillic);">${vocab.exampleRu}</div><button class="btn-ghost icon-action-btn btn-play-example" type="button" title="Beispielsatz anhören">🔊</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div lang="ru" style="font-weight: 600; font-family: var(--font-cyrillic);">${vocab.exampleRu}</div><button class="btn-ghost icon-action-btn btn-play-example" type="button" title="Beispielsatz anhören" aria-label="Russischen Beispielsatz anhören">🔊</button></div>
             <div>${vocab.exampleDe || ''}</div>
           </div>
         ` : ''}
@@ -1268,7 +1365,7 @@ class AppController {
     document.getElementById('flashcardProgressLabel').textContent = `Karte ${this.currentFlashcardIdx + 1} von ${this.flashcards.length}`;
     document.getElementById('cardFrontCategory').textContent = vocab.category.toUpperCase();
     document.getElementById('cardFrontRussian').textContent = vocab.russian;
-    document.getElementById('cardFrontTranslit').textContent = vocab.translit || '';
+    document.getElementById('cardFrontTranslit').textContent = `Aussprache: ${vocab.translit || ''}`;
     document.getElementById('cardBackGerman').textContent = vocab.german;
     document.getElementById('cardBackExampleRu').textContent = vocab.exampleRu || vocab.russian;
     document.getElementById('cardBackExampleDe').textContent = vocab.exampleDe || vocab.german;
@@ -1308,7 +1405,7 @@ class AppController {
     const exercises = vocabList.map((v, idx) => {
       const options = makeDistinctAnswerOptions(v.german, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.german));
       return {
-        id: `refill_${idx}`,
+        id: `vocab:${v.id}:ru_de`,
         type: "choice_ru_de",
         question: `Was bedeutet: '${v.russian}'?`,
         audioText: v.russian,
@@ -1332,7 +1429,7 @@ class AppController {
       if (isRuToDe) {
         const options = makeDistinctAnswerOptions(v.german, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.german));
         return {
-          id: `quick_${idx}`,
+          id: `vocab:${v.id}:ru_de`,
           type: "choice_ru_de",
           question: `Was bedeutet '${v.russian}'?`,
           audioText: v.russian,
@@ -1343,7 +1440,7 @@ class AppController {
       } else {
         const options = makeDistinctAnswerOptions(v.russian, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.russian));
         return {
-          id: `quick_${idx}`,
+          id: `vocab:${v.id}:de_ru`,
           type: "choice_de_ru",
           question: `Wie heißt '${v.german}' auf Russisch?`,
           // Never place the target Russian word in the prompt for German → Russian.
@@ -1363,7 +1460,7 @@ class AppController {
     const exercises = vocabList.map((v, idx) => {
       const options = makeDistinctAnswerOptions(v.german, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.german));
       return {
-        id: `listen_${idx}`,
+        id: `vocab:${v.id}:ru_de`,
         type: "listening",
         question: "Welches russische Wort hast du gehört?",
         audioText: v.russian,
@@ -1386,13 +1483,15 @@ class AppController {
         id: "match_set_1",
         type: "matching",
         question: "Verbinde die russischen und deutschen Wörter:",
-        pairs: set1.map(v => ({ left: v.russian, right: v.german }))
+        pairs: set1.map(v => ({ left: v.russian, right: v.german })),
+        learningQuestions: set1.map(v => ({id:`vocab:${v.id}:match`,left:v.russian,right:v.german}))
       },
       {
         id: "match_set_2",
         type: "matching",
         question: "Verbinde Runde 2:",
-        pairs: set2.map(v => ({ left: v.russian, right: v.german }))
+        pairs: set2.map(v => ({ left: v.russian, right: v.german })),
+        learningQuestions: set2.map(v => ({id:`vocab:${v.id}:match`,left:v.russian,right:v.german}))
       }
     ];
 
@@ -1409,10 +1508,9 @@ class AppController {
 
     const pool = (difficult.length >= 4 ? difficult : allVocab).sort(() => Math.random() - 0.5).slice(0, 6);
     const exercises = pool.map((v, idx) => {
-      const others = allVocab.filter(o => o.id !== v.id).sort(() => Math.random() - 0.5).slice(0, 3);
-      const options = [v.german, ...others.map(o => o.german)].sort(() => Math.random() - 0.5);
+      const options = makeDistinctAnswerOptions(v.german, allVocab.filter(o => o.id !== v.id).map(o => o.german));
       return {
-        id: `diff_${idx}`,
+        id: `vocab:${v.id}:ru_de`,
         type: "choice_ru_de",
         question: `Wiederhole: Was bedeutet '${v.russian}'?`,
         audioText: v.russian,
@@ -1428,10 +1526,9 @@ class AppController {
   startMotorsportPractice() {
     const motorsportVocab = storage.getAllVocab().filter(v => v.category === 'vehicles').sort(() => Math.random() - 0.5);
     const exercises = motorsportVocab.slice(0, 6).map((v, idx) => {
-      const others = motorsportVocab.filter(o => o.id !== v.id).slice(0, 3);
-      const options = [v.german, ...others.map(o => o.german)].sort(() => Math.random() - 0.5);
+      const options = makeDistinctAnswerOptions(v.german, motorsportVocab.filter(o => o.id !== v.id).map(o => o.german));
       return {
-        id: `motor_${idx}`,
+        id: `vocab:${v.id}:ru_de`,
         type: "choice_ru_de",
         question: `Motorsport-Vokabel: '${v.russian}'?`,
         audioText: v.russian,
@@ -1504,24 +1601,36 @@ class AppController {
 
     // Delegated handler also supports catalog items rendered into the shop.
     const shop = document.getElementById('profileXpShop');
-    if (shop) shop.addEventListener('click', event => {
+    if (shop) shop.addEventListener('click', async event => {
       const btn = event.target.closest('.btn-buy-item');
       if (btn) {
         const itemId = btn.getAttribute('data-item');
         if (XP_SHOP_ITEMS.some(item => item.id === itemId) && (storage.userData.inventory.purchasedItems || []).includes(itemId)) {
-          storage.equipShopItem(itemId);
-          this.showToast('Gegenstand ausgerüstet.', '✨');
-          this.renderProfile();
+          try {
+            if (window.accountSync?.user && !storage.demoMode) await window.accountSync.equipItem(itemId);
+            else storage.equipShopItem(itemId);
+            this.showToast('Gegenstand ausgerüstet.', '✨'); this.renderProfile();
+          } catch(error) { this.showToast(error.message || 'Gegenstand konnte nicht ausgerüstet werden.', '⚠️'); }
           return;
         }
+        btn.disabled = true;
         const cost = parseInt(btn.getAttribute('data-cost')) || 100;
-        const res = storage.buyShopItem(itemId, cost);
+        let res;
+        try {
+          if (window.accountSync?.user && !storage.demoMode) {
+            btn.dataset.purchaseRequestId ||= crypto.randomUUID();
+            const response = await window.accountSync.purchaseItem(itemId, btn.dataset.purchaseRequestId);
+            res = {success:true, response};
+            delete btn.dataset.purchaseRequestId;
+          } else res = storage.buyShopItem(itemId, cost);
+        } catch(error) { res = {success:false,reason:error.message || 'Kauf fehlgeschlagen.'}; }
         if (res.success) {
           if (window.sfx) window.sfx.playCelebration();
           this.showToast('Erfolgreich im XP-Shop gekauft!', '🛍️');
           this.updateHeaderStats();
           this.renderProfile();
         } else {
+          if (btn.isConnected) btn.disabled = false;
           if (window.sfx) window.sfx.playWrong();
           this.showToast(res.reason || 'Nicht genügend XP vorhanden!', '⚠️');
         }
@@ -1531,10 +1640,12 @@ class AppController {
     // Profil-Titel Wähler
     const selectTitle = document.getElementById('selectActiveTitle');
     if (selectTitle) {
-      selectTitle.onchange = () => {
-        storage.setActiveTitle(selectTitle.value);
-        this.renderProfile();
-        this.showToast(`Titel gewechselt: ${selectTitle.value}`, '👑');
+      selectTitle.onchange = async () => {
+        try {
+          if (window.accountSync?.user && !storage.demoMode) await window.accountSync.equipItem(`title_${selectTitle.value}`);
+          else storage.setActiveTitle(selectTitle.value);
+          this.renderProfile(); this.showToast(`Titel gewechselt: ${selectTitle.value}`, '👑');
+        } catch(error) { this.showToast(error.message || 'Titel kann nicht ausgerüstet werden.', '⚠️'); this.renderProfile(); }
       };
     }
 

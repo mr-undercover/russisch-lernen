@@ -86,7 +86,8 @@ ADVANCED_UNIT_SPECS.forEach(spec => spec.lessons.forEach((lesson,lessonIndex) =>
     const id=`u${spec.n}_${lessonIndex}_${wordIndex}`;
     if (ADVANCED_VOCAB_IDS.has(id)) return;
     ADVANCED_VOCAB_IDS.add(id);
-    VOCAB_DATA.push({ id, russian, german, translit:"", ipa:"", category:`unit_${spec.n}`, sourceUnit:spec.n, sourceLesson:lessonIndex });
+    const enrichment = window.ADVANCED_VOCAB_ENRICHMENTS?.[id] || [];
+    VOCAB_DATA.push({ id, russian, german, translit:enrichment[0] || "", ipa:"", exampleRu:enrichment[1] || "", exampleDe:enrichment[2] || "", category:`unit_${spec.n}`, sourceUnit:spec.n, sourceLesson:lessonIndex });
   });
 }));
 
@@ -135,7 +136,8 @@ function makeAdvancedLesson(unitNumber, lessonIndex, lessonSpec) {
     }
   }
   if (lessonSpec.concept) exercises.push({ id:`${lessonId}_grammar`, type:"choice_ru_de", learningItemId:`u${unitNumber}_${lessonIndex}_grammar`, question:"Welche Aussage passt zur Grammatikerklärung?", options:["Der Fall zeigt die Funktion eines Nomens im Satz.","Russisch verwendet keine Endungen.","Die Wortstellung ersetzt alle Formen.","Verben verändern sich nie."], correctIndex:0, explanation:lessonSpec.concept, difficulty:4 });
-  return { id:lessonId, unitId:`unit_${unitNumber}`, title:lessonSpec.title, description:`Wortschatz, Beispiele und Übungen zu ${lessonSpec.title.toLowerCase()}.`, xpReward:55, theory:{title:lessonSpec.title, concept:lessonSpec.concept || `Lerne wichtige russische Wörter und wende sie in Alltagssituationen an. Achte auf Betonung, Wortform und den Zusammenhang des Satzes.`, points:vocab.map(([ru,de])=>`${ru} — ${de}`), examples:examples.map(([ru,de])=>({ru,de})), tip:"Sprich jedes neue Wort laut mit. Bilde danach einen eigenen kurzen Satz und wiederhole schwierige Wörter morgen noch einmal."}, exercises };
+  const vocabEntries = vocab.map((_, wordIndex) => VOCAB_DATA.find(entry => entry.id === `u${unitNumber}_${lessonIndex}_${wordIndex}`)).filter(Boolean);
+  return { id:lessonId, unitId:`unit_${unitNumber}`, title:lessonSpec.title, description:`Wortschatz, Beispiele und Übungen zu ${lessonSpec.title.toLowerCase()}.`, xpReward:55, theory:{title:lessonSpec.title, concept:lessonSpec.concept || `Lerne wichtige russische Wörter und wende sie in Alltagssituationen an. Achte auf Betonung, Wortform und den Zusammenhang des Satzes.`, points:vocab.map(([ru,de])=>`${ru} — ${de}`), vocabulary:vocabEntries, examples:examples.map(([ru,de])=>({ru,de})), tip:"Sprich jedes neue Wort laut mit. Bilde danach einen eigenen kurzen Satz und wiederhole schwierige Wörter morgen noch einmal."}, exercises };
 }
 
 ADVANCED_UNIT_SPECS.forEach(spec => {
@@ -147,6 +149,10 @@ class AdaptiveLearningEngine {
   constructor() {
     this.key = "russisch_adaptive_learning_v1";
     try { this.data = JSON.parse(localStorage.getItem(this.key) || "{}"); } catch (_) { this.data = {}; }
+    if (storage.userData.adaptiveLearning && typeof storage.userData.adaptiveLearning === "object") this.data = storage.userData.adaptiveLearning;
+  }
+  loadFromUserData() {
+    this.data = storage.userData.adaptiveLearning && typeof storage.userData.adaptiveLearning === "object" ? storage.userData.adaptiveLearning : {};
   }
   keyFor(ex) { return `${ex.learningItemId || ex.id}::${ex.type}`; }
   get(ex) { return this.data[this.keyFor(ex)] || { mastery:0.25, correct:0, wrong:0, repetitions:0, interval:0, due:0, difficulty:ex.difficulty || 1, history:[] }; }
@@ -175,7 +181,11 @@ class AdaptiveLearningEngine {
     else { s.wrong++; s.mastery=Math.max(0,s.mastery-.16); s.interval=0; }
     s.due=now + (correct ? s.interval*86400000 : 10*60000); s.lastReviewed=now; s.difficulty=ex.difficulty||1;
     this.data[k]=s;
-    try { localStorage.setItem(this.key,JSON.stringify(this.data)); } catch(e) { console.warn("Adaptive progress could not be saved",e); }
+    storage.userData.adaptiveLearning = this.data;
+    if (!(window.accountSync?.user && !storage.demoMode)) {
+      try { localStorage.setItem(this.key,JSON.stringify(this.data)); } catch(e) { console.warn("Adaptive progress could not be saved",e); }
+    }
+    storage.saveUserData();
     return s;
   }
   getSummary() { const rows=Object.values(this.data); const mastered=rows.filter(x=>x.mastery>=.8).length; const avgMastery=rows.reduce((a,x)=>a+x.mastery,0)/Math.max(1,rows.length); const weakest=Object.entries(this.data).filter(([,x])=>x.wrong>=2 && x.mastery<.45).sort((a,b)=>a[1].mastery-b[1].mastery).slice(0,5); const labels=new Map(VOCAB_DATA.map(vocab=>[vocab.id,vocab.russian])); DEFAULT_COURSE_DATA.units.forEach(unit=>(unit.lessons||[]).forEach(lesson=>(lesson.exercises||[]).forEach(ex=>labels.set(ex.learningItemId||ex.id,ex.audioText||ex.targetSentence||ex.question)))); const trend=rows.flatMap(item=>item.history||[]).sort((a,b)=>a.at-b.at).slice(-14); return {items:rows.length, mastered, difficult:rows.filter(x=>x.wrong>=2 && x.mastery<.45).length, difficultWords:weakest.map(([key])=>labels.get(key.split("::")[0])||key.split("::")[0]), attempts:rows.reduce((a,x)=>a+x.repetitions,0), correct:rows.reduce((a,x)=>a+x.correct,0), wrong:rows.reduce((a,x)=>a+x.wrong,0), avgMastery, trend, level:Math.max(1,Math.min(10,1+Math.floor(avgMastery*9)))}; }
@@ -190,10 +200,13 @@ const installAdaptiveHooks = () => {
   window.app.startQuiz = function(exercises, options={}) {
     const summary=window.adaptiveLearning.getSummary();
     const vocabLinked=exercises.map(source=>{
-      if(source.learningItemId) return source;
+      const linkedId = source.learningItemId || source.learningQuestions?.[0]?.id?.match(/^vocab:(.+):/)?.[1] || source.id?.match(/^vocab:(.+):/)?.[1];
+      const linkedVocab = VOCAB_DATA.find(item => item.id === linkedId);
+      if(source.learningItemId) return linkedVocab ? {...source,vocabularyInfo:linkedVocab} : source;
       const candidates=[source.audioText,source.correctIndex!==undefined?source.options?.[source.correctIndex]:null,source.targetSentence];
       const match=candidates.map(value=>typeof value==="string"?value.split(" (")[0].trim().normalize("NFC").toLocaleLowerCase("ru-RU"):"").map(value=>VOCAB_RUSSIAN_LOOKUP.get(value)).find(Boolean);
-      return match?{...source,learningItemId:match}:source;
+      const vocab=match?VOCAB_DATA.find(item=>item.id===match):linkedVocab;
+      return vocab?{...source,learningItemId:match||vocab.id,vocabularyInfo:vocab}:source;
     });
     const scheduled=window.adaptiveLearning.choose(vocabLinked).map(source => {
       const ex={...source};
@@ -278,8 +291,10 @@ const installAdaptiveHooks = () => {
     };
     window.app.renderLearningPath();
   }
+  window.app.renderVocabCategories();
+  window.app.renderVocabList();
   const originalReset=storage.resetAllProgress;
-  storage.resetAllProgress=function() { const result=originalReset.call(this); window.adaptiveLearning.reset(); return result; };
+  storage.resetAllProgress=function() { const result=originalReset.call(this); window.adaptiveLearning.reset(); this.userData.adaptiveLearning={}; this.saveUserData(); return result; };
   // The base app renders on construction, before this additive file loads.
   window.app.renderProfile();
 };
