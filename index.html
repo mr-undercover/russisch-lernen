@@ -281,7 +281,7 @@
       <section id="view-profile" class="view-section">
         <!-- Hero Box -->
         <div class="profile-hero">
-          <div class="profile-avatar">👨‍🚀</div>
+          <div class="profile-avatar" id="profileAvatar">👨‍🚀</div>
           <h2 style="font-size: 1.4rem; font-weight: 800;" id="profileUsername">Russisch-Entdecker</h2>
           <div class="profile-level-badge" id="profileLevelTitle">Stufe 1: Novize</div>
 
@@ -331,6 +331,7 @@
         <!-- XP-Belohnungsshop & Inventar -->
         <h3 class="section-title">🛍️ XP-Belohnungsshop & Booster</h3>
         <div class="shop-container" id="profileXpShop">
+          <div class="shop-balance">Dein Guthaben: <strong id="shopXpBalance">0 XP</strong></div>
           <!-- Inventar-Statusleiste -->
           <div class="inventory-status-bar">
             <div class="inv-item">
@@ -442,6 +443,30 @@
         <!-- Einstellungen -->
         <h3 class="section-title">⚙️ Einstellungen</h3>
         <div class="settings-card">
+          <div class="settings-row">
+            <span class="settings-label">Freie Einheitenwahl erlauben</span>
+            <label class="switch">
+              <input type="checkbox" id="settingFreeLessonSelection">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Demo-Modus (isolierter Beispielstand)</span>
+            <button class="btn-ghost" id="btnDemoMode">Demo starten</button>
+          </div>
+          <div class="settings-row" style="display:block">
+            <strong>☁️ Konto & Gerätesynchronisierung</strong>
+            <p style="color:var(--text-muted);font-size:.85rem;margin:6px 0">Mit demselben Konto bleibt dein Lernstand auf deinen Geräten verfügbar.</p>
+            <div class="editor-form-group"><label>Benutzername</label><input class="editor-input" type="text" id="accountUsername" autocomplete="nickname" maxlength="30"></div>
+            <div class="editor-form-group"><label>E-Mail</label><input class="editor-input" type="email" id="accountEmail" autocomplete="email"></div>
+            <div class="editor-form-group"><label>Passwort</label><input class="editor-input" type="password" id="accountPassword" autocomplete="current-password"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-ghost" id="accountSignUp">Registrieren</button><button class="btn-ghost" id="accountSignIn">Anmelden</button>
+              <button class="btn-ghost" id="accountSaveProfile">Benutzername speichern</button>
+              <button class="btn-ghost" id="accountResetPassword">Passwort zurücksetzen</button><button class="btn-ghost" id="accountSignOut">Abmelden</button>
+            </div><div id="accountStatus" role="status" style="margin-top:8px;font-size:.85rem">Lokaler Lernstand aktiv</div>
+            <button class="btn-ghost" id="accountImportLocal" type="button" hidden>Lokalen Lernstand in dieses Konto übernehmen</button>
+          </div>
           <div class="settings-row">
             <span class="settings-label">Soundeffekte (SFX)</span>
             <label class="switch">
@@ -813,6 +838,9 @@
   <script src="js/storage.js"></script>
   <script src="js/app.js"></script>
   <script src="js/learning-enhancements.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/account-sync.js"></script>
 
   <!-- Service Worker Registrierung -->
   <script>

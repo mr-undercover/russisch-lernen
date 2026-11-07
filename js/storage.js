@@ -25,20 +25,27 @@ const DEFAULT_USER_DATA = {
     shieldActive: false,
     activeBoosterUntil: 0,
     unlockedTitles: ["Novize (Новичок)"],
-    activeTitle: "Novize (Новичок)"
+    activeTitle: "Novize (Новичок)",
+    purchasedItems: [],
+    equippedItems: { avatar:'👨‍🚀', frame:'', theme:'' }
   },
   settings: {
     soundEffects: true,
     speechAudio: true,
     speechRate: 0.85,
     dailyGoalXP: 200, // Ausbalanciert auf ca. 12-15 Minuten echtes Lernen!
-    darkMode: false
+    darkMode: false,
+    freeLessonSelection: false
   },
   stats: {
     totalExercisesSolved: 0,
     totalPracticeTimeSeconds: 0,
     perfectLessonsCount: 0,
-    itemsBoughtCount: 0
+    itemsBoughtCount: 0,
+    totalLearningDays: 0,
+    quickQuizzesCompleted: 0,
+    consecutiveCorrect: 0,
+    totalXpEarned: 0
   },
   achievements: []
 };
@@ -64,11 +71,33 @@ const ACHIEVEMENTS_LIST = [
   { id: "shop_buyer", title: "Kaufrausch", desc: "Kaufe dein erstes Upgrade im XP-Belohnungsshop", icon: "🛍️" },
   { id: "night_owl", title: "Nachteule", desc: "Lerne zu später Stunde nach 22:00 Uhr", icon: "🦉" },
   { id: "early_bird", title: "Frühaufsteher", desc: "Lerne vor 08:00 Uhr morgens", icon: "🌅" },
-  { id: "custom_category", title: "Kategorie-Schöpfer", desc: "Erstelle deine eigene Vokabel-Kategorie", icon: "💡" }
+  { id: "custom_category", title: "Kategorie-Schöpfer", desc: "Erstelle deine eigene Vokabel-Kategorie", icon: "💡" },
+  ...[
+    ["lessons_10","Lernpfad-Erkunder","Schließe 10 Lektionen ab","🧭","gewöhnlich"],["lessons_25","Kurs-Kenner","Schließe 25 Lektionen ab","📘","selten"],["lessons_50","Sprachreisende","Schließe 50 Lektionen ab","🗺️","episch"],["lessons_100","Russisch-Profi","Schließe 100 Lektionen ab","🎓","legendär"],
+    ["vocab_250","Wortschatz-Sammler","Lerne 250 Vokabeln","📚","selten"],["vocab_500","Wortschatz-Hüter","Lerne 500 Vokabeln","🧠","episch"],["vocab_1000","Wortschatz-Legende","Lerne 1.000 Vokabeln","🏛️","legendär"],
+    ["streak_100","Jahrhundert-Serie","Erreiche 100 Lerntage in Folge","🔥","legendär"],["days_30","Beständige Lernende","Lerne an 30 verschiedenen Tagen","📅","selten"],["days_100","Lerngewohnheit","Lerne an 100 verschiedenen Tagen","🗓️","episch"],
+    ["correct_10","Trefferserie","Beantworte 10 Fragen hintereinander richtig","🎯","gewöhnlich"],["correct_25","Präzisionsprofi","Beantworte 25 Fragen hintereinander richtig","🏹","selten"],["correct_50","Unfehlbar","Beantworte 50 Fragen hintereinander richtig","💎","episch"],
+    ["perfect_10","Makellose Serie","Schließe 10 Lektionen fehlerfrei ab","✨","episch"],["accuracy_95","Sicheres Wissen","Erreiche mindestens 95 % Trefferquote","📈","selten"],["accuracy_100","Volltreffer","Erreiche 100 % Trefferquote in einer Lektion","💯","episch"],
+    ["xp_1000","XP-Meilenstein","Sammle insgesamt 1.000 XP","⚡","selten"],["xp_5000","XP-Meister","Sammle insgesamt 5.000 XP","🌟","episch"],["quiz_10","Blitzstarter","Schließe 10 Blitz-Quizze ab","⚡","selten"],
+    ["evening_learner","Abendrunde","Lerne am Abend","🌆","gewöhnlich"],["hard_lesson","Herausforderung angenommen","Schließe eine Lektion der höchsten Stufe ab","🧗","episch"],
+    ["rare_streak","Außergewöhnliche Ausdauer","Erreiche eine 30-tägige Lernserie","🌠","legendär"],["case_master","Kasus-Kenner","Meistere alle sechs russischen Fälle","🧩","legendär"]
+  ].map(([id,title,desc,icon,rarity])=>({id,title,desc,icon,rarity,category:id.startsWith("lesson")?"Lernfortschritt":id.startsWith("vocab")?"Wortschatz":id.includes("streak")||id.startsWith("days")?"Aktivität":"Herausforderung"}))
+];
+
+const XP_SHOP_ITEMS = [
+  {id:'avatar_cat',category:'Design & Anpassung',icon:'🐈',title:'Avatar: Schneeleopard',desc:'Ein tierischer Begleiter für dein Profil.',cost:150,key:'avatar',value:'🐈'},
+  {id:'avatar_mage',category:'Design & Anpassung',icon:'🧙',title:'Avatar: Sprachmagier',desc:'Ein besonderer Avatar für deinen Lernweg.',cost:250,key:'avatar',value:'🧙'},
+  {id:'avatar_cosmonaut',category:'Design & Anpassung',icon:'👩‍🚀',title:'Avatar: Kosmonautin',desc:'Entdecke neue Lernwelten.',cost:350,key:'avatar',value:'👩‍🚀'},
+  {id:'frame_gold',category:'Profilrahmen',icon:'✨',title:'Goldener Profilrahmen',desc:'Ein goldener Akzent rund um dein Profilbild.',cost:300,key:'frame',value:'gold'},
+  {id:'frame_aurora',category:'Profilrahmen',icon:'🌌',title:'Polarlicht-Rahmen',desc:'Ein seltener Rahmen mit Polarlicht-Farben.',cost:500,key:'frame',value:'aurora'},
+  {id:'theme_ocean',category:'Farbthemen',icon:'🌊',title:'Ozean-Thema',desc:'Kühle Türkis- und Blautöne.',cost:350,key:'theme',value:'ocean'},
+  {id:'theme_sunset',category:'Farbthemen',icon:'🌅',title:'Abendrot-Thema',desc:'Warme Korall- und Orangetöne.',cost:450,key:'theme',value:'sunset'},
+  {id:'theme_forest',category:'Farbthemen',icon:'🌿',title:'Wald-Thema',desc:'Ruhiges Grün für konzentrierte Lernzeit.',cost:450,key:'theme',value:'forest'}
 ];
 
 class StorageManager {
   constructor() {
+    this.demoMode = false;
     this.userData = this.loadUserData();
     this.checkDayReset();
     this.applySettingsToApp();
@@ -82,9 +111,10 @@ class StorageManager {
         return {
           ...DEFAULT_USER_DATA,
           ...parsed,
-          inventory: { ...DEFAULT_USER_DATA.inventory, ...(parsed.inventory || {}) },
+          inventory: { ...DEFAULT_USER_DATA.inventory, ...(parsed.inventory || {}), equippedItems: { ...DEFAULT_USER_DATA.inventory.equippedItems, ...(parsed.inventory?.equippedItems || {}) }, purchasedItems: parsed.inventory?.purchasedItems || [] },
           settings: { ...DEFAULT_USER_DATA.settings, ...(parsed.settings || {}) },
-          stats: { ...DEFAULT_USER_DATA.stats, ...(parsed.stats || {}) }
+          stats: { ...DEFAULT_USER_DATA.stats, ...(parsed.stats || {}) },
+          achievements: Array.isArray(parsed.achievements) ? [...new Set(parsed.achievements)] : []
         };
       }
     } catch (e) {
@@ -94,8 +124,11 @@ class StorageManager {
   }
 
   saveUserData() {
+    if (this.demoMode) return;
     try {
-      localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(this.userData));
+      const userId = window.accountSync?.user?.id;
+      localStorage.setItem(userId ? `russisch_progress_${userId}` : STORAGE_KEYS.USER_DATA, JSON.stringify(this.userData));
+      window.scheduleAccountSync?.();
     } catch (e) {
       console.error("Error saving user data:", e);
     }
@@ -168,6 +201,8 @@ class StorageManager {
       }
     }
 
+    if (last !== today) this.userData.stats.totalLearningDays = (this.userData.stats.totalLearningDays || 0) + 1;
+
     this.userData.lastActiveDate = today;
 
     // Streak-Erfolge prüfen
@@ -175,6 +210,12 @@ class StorageManager {
     if (this.userData.streak >= 7) this.unlockAchievement("streak_7");
     if (this.userData.streak >= 14) this.unlockAchievement("streak_14");
     if (this.userData.streak >= 30) this.unlockAchievement("streak_30");
+    if (this.userData.streak >= 100) this.unlockAchievement("streak_100");
+    if (this.userData.streak >= 30) this.unlockAchievement("rare_streak");
+    const hourNow = new Date().getHours();
+    if (hourNow >= 17 && hourNow < 22) this.unlockAchievement("evening_learner");
+    if (this.userData.stats.totalLearningDays >= 30) this.unlockAchievement("days_30");
+    if (this.userData.stats.totalLearningDays >= 100) this.unlockAchievement("days_100");
 
     this.saveUserData();
   }
@@ -186,6 +227,9 @@ class StorageManager {
     }
 
     this.userData.xp += finalAmount;
+    this.userData.stats.totalXpEarned = (this.userData.stats.totalXpEarned || 0) + finalAmount;
+    if (this.userData.stats.totalXpEarned >= 1000) this.unlockAchievement("xp_1000");
+    if (this.userData.stats.totalXpEarned >= 5000) this.unlockAchievement("xp_5000");
     this.userData.todayXp = (this.userData.todayXp || 0) + finalAmount;
     this.userData.stats.totalExercisesSolved = (this.userData.stats.totalExercisesSolved || 0) + 1;
     this.recordActivity();
@@ -238,6 +282,12 @@ class StorageManager {
     }
 
     this.unlockAchievement("first_lesson");
+    const lessonCount = Object.keys(this.userData.completedLessons).length;
+    [[10,"lessons_10"],[25,"lessons_25"],[50,"lessons_50"],[100,"lessons_100"]].forEach(([n,id])=>{ if(lessonCount>=n)this.unlockAchievement(id); });
+    if (isPerfect && this.userData.stats.perfectLessonsCount >= 10) this.unlockAchievement("perfect_10");
+    if (isPerfect && score >= 100) this.unlockAchievement("accuracy_100");
+    if (score >= 95) this.unlockAchievement("accuracy_95");
+    if (/^lesson_\d+_/.test(lessonId) && Number(lessonId.split('_')[1]) >= 17) this.unlockAchievement("hard_lesson");
 
     if (lessonId.startsWith("lesson_13_") || lessonId.includes("motor")) {
       this.unlockAchievement("motorsport_fan");
@@ -282,11 +332,20 @@ class StorageManager {
 
   // XP-Belohnungsshop Kaufen
   buyShopItem(itemId, cost) {
+    this.userData.inventory.purchasedItems ||= [];
+    this.userData.inventory.equippedItems ||= { avatar:'👨‍🚀', frame:'', theme:'' };
+    const catalogItem = XP_SHOP_ITEMS.find(item => item.id === itemId);
+    if (catalogItem) cost = catalogItem.cost;
+    const reusable = ['shield','freeze','booster','hearts_refill'].includes(itemId);
+    if (!reusable && this.userData.inventory.purchasedItems.includes(itemId)) return { success:false, reason:"Diesen Gegenstand besitzt du bereits." };
+    if (itemId.startsWith('title_') && (this.userData.inventory.unlockedTitles || []).includes(itemId.slice(6))) return { success:false, reason:"Diesen Titel besitzt du bereits." };
+    if (!Number.isFinite(cost) || cost < 0) return { success:false, reason:"Ungültiger Preis." };
     if (this.userData.xp < cost) {
       return { success: false, reason: "Nicht genügend XP vorhanden!" };
     }
 
     this.userData.xp -= cost;
+    if (!reusable) this.userData.inventory.purchasedItems.push(itemId);
     this.userData.stats.itemsBoughtCount = (this.userData.stats.itemsBoughtCount || 0) + 1;
     this.unlockAchievement("shop_buyer");
 
@@ -305,9 +364,19 @@ class StorageManager {
       }
       this.userData.inventory.activeTitle = titleName;
     }
+    if (catalogItem) this.userData.inventory.equippedItems[catalogItem.key] = catalogItem.value;
 
     this.saveUserData();
+    this.applySettingsToApp();
     return { success: true };
+  }
+
+  equipShopItem(itemId) {
+    const item = XP_SHOP_ITEMS.find(entry => entry.id === itemId);
+    if (!item || !(this.userData.inventory.purchasedItems || []).includes(itemId)) return false;
+    this.userData.inventory.equippedItems ||= {};
+    this.userData.inventory.equippedItems[item.key] = item.value;
+    this.applySettingsToApp(); this.saveUserData(); return true;
   }
 
   setActiveTitle(titleName) {
@@ -341,6 +410,9 @@ class StorageManager {
     if (learnedCount >= 50) this.unlockAchievement("vocab_50");
     if (learnedCount >= 100) this.unlockAchievement("vocab_100");
     if (learnedCount >= 150) this.unlockAchievement("vocab_150");
+    if (learnedCount >= 250) this.unlockAchievement("vocab_250");
+    if (learnedCount >= 500) this.unlockAchievement("vocab_500");
+    if (learnedCount >= 1000) this.unlockAchievement("vocab_1000");
 
     this.saveUserData();
   }
@@ -384,12 +456,58 @@ class StorageManager {
   unlockAchievement(achId) {
     if (!this.userData.achievements.includes(achId)) {
       this.userData.achievements.push(achId);
+      const ach = ACHIEVEMENTS_LIST.find(a => a.id === achId);
+      const reward = ach?.rarity === 'legendär' ? 100 : ach?.rarity === 'episch' ? 50 : ach?.rarity === 'selten' ? 30 : 15;
+      this.userData.xp += reward;
+      this.userData.stats.totalXpEarned = (this.userData.stats.totalXpEarned || 0) + reward;
       this.saveUserData();
       if (window.showAchievementToast) {
-        const ach = ACHIEVEMENTS_LIST.find(a => a.id === achId);
         if (ach) window.showAchievementToast(ach);
       }
     }
+  }
+
+  recordAnswer(correct) {
+    this.userData.stats.correctAnswers = (this.userData.stats.correctAnswers || 0) + (correct ? 1 : 0);
+    this.userData.stats.totalAnswers = (this.userData.stats.totalAnswers || 0) + 1;
+    this.userData.stats.consecutiveCorrect = correct ? (this.userData.stats.consecutiveCorrect || 0) + 1 : 0;
+    const run = this.userData.stats.consecutiveCorrect;
+    if(run>=10)this.unlockAchievement('correct_10'); if(run>=25)this.unlockAchievement('correct_25'); if(run>=50)this.unlockAchievement('correct_50');
+    const accuracy = this.userData.stats.correctAnswers / Math.max(1,this.userData.stats.totalAnswers);
+    if(this.userData.stats.totalAnswers>=20 && accuracy>=.95)this.unlockAchievement('accuracy_95');
+    this.saveUserData();
+  }
+
+  unlockLessonManually(lessonId) {
+    if (!this.userData.unlockedLessons.includes(lessonId) && !this.userData.completedLessons[lessonId]) this.userData.unlockedLessons.push(lessonId);
+    this.userData.manualUnlocks ||= [];
+    if (!this.userData.manualUnlocks.includes(lessonId)) this.userData.manualUnlocks.push(lessonId);
+    this.saveUserData();
+    return true;
+  }
+
+  startDemoMode() {
+    if (this.demoMode) return;
+    this._accountDataBeforeDemo = this.userData;
+    this.demoMode = true;
+    this.userData = JSON.parse(JSON.stringify(DEFAULT_USER_DATA));
+    this.userData.xp = 420;
+    this.userData.streak = 4;
+    this.userData.longestStreak = 7;
+    this.userData.completedLessons = { lesson_1_1:{completed:true,score:100,completedAt:new Date().toISOString()} };
+    this.userData.unlockedLessons = ['lesson_1_1','lesson_1_2','lesson_2_1'];
+    this.userData.learnedVocab = {v_privet:{learned:true,repetitions:4,mistakes:1,lastReview:new Date().toISOString()}};
+    this.userData.achievements = ['first_lesson','streak_3','vocab_10'];
+    this.applySettingsToApp();
+  }
+
+  endDemoMode() {
+    if (!this.demoMode) return;
+    this.demoMode = false;
+    this.userData = this._accountDataBeforeDemo || JSON.parse(JSON.stringify(DEFAULT_USER_DATA));
+    delete this._accountDataBeforeDemo;
+    this.applySettingsToApp();
+    this.saveUserData();
   }
 
   getUserLevel() {
@@ -416,6 +534,9 @@ class StorageManager {
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
+    const palette = this.userData.inventory?.equippedItems?.theme || '';
+    if (palette) document.documentElement.setAttribute('data-color-theme', palette);
+    else document.documentElement.removeAttribute('data-color-theme');
   }
 
   updateSettings(newSettings) {

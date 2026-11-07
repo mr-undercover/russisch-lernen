@@ -1764,3 +1764,16 @@ input:checked + .slider:before {
   }
 }
 
+.shop-balance { padding: 12px 16px; margin-bottom: 12px; border-radius: var(--radius-md); background: var(--bg-subtle); color: var(--text-secondary); }
+.shop-balance strong { color: var(--primary); font-size: 1.15rem; margin-left: 6px; }
+.btn-buy-item:disabled { opacity: .55; cursor: not-allowed; filter: grayscale(.4); }
+.achievement-card[class*="rarity-"] { border-left-width: 5px; }
+.achievement-card.rarity-selten { border-left-color: #0ea5e9; }
+.achievement-card.rarity-episch { border-left-color: #8b5cf6; }
+.achievement-card.rarity-legendär { border-left-color: #f59e0b; }
+.shop-category-heading { grid-column: 1 / -1; margin: 12px 0 0; color: var(--text-secondary); }
+.profile-avatar[data-frame="gold"] { outline: 4px solid #f5b942; outline-offset: 3px; }
+.profile-avatar[data-frame="aurora"] { outline: 4px solid #38bdf8; outline-offset: 3px; box-shadow: 0 0 16px rgba(139,92,246,.65); }
+[data-color-theme="ocean"] { --primary:#0e7490; --primary-hover:#155e75; --primary-light:#cffafe; --primary-shadow:#164e63; }
+[data-color-theme="sunset"] { --primary:#e05d44; --primary-hover:#c2410c; --primary-light:#ffedd5; --primary-shadow:#9a3412; }
+[data-color-theme="forest"] { --primary:#15803d; --primary-hover:#166534; --primary-light:#dcfce7; --primary-shadow:#14532d; }

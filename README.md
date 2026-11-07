@@ -89,6 +89,10 @@ Eine vollständige, moderne und interaktive Sprachlern-App zum Erlernen der russ
 - Wort und Aufgabentyp werden getrennt bewertet; Fehler senken die Sicherheit und legen eine frühere Wiederholung fest.
 - Sicheres Wissen bekommt längere Wiederholungsabstände. Mit wachsender Sicherheit erscheinen mehr freie Übersetzungen und variierte Antwortmöglichkeiten.
 - Fortschritt bleibt lokal gespeichert und wird im Profil mit Trefferquote, sicher beherrschten Einträgen und Lernniveau angezeigt.
+- Errungenschaften haben Seltenheitsstufen und geben einmalige XP-Boni. Sperrbedingungen bleiben bis zur Freischaltung verborgen.
+- Der XP-Shop umfasst zusätzliche Avatare, Profilrahmen und Farbthemen; gekaufte Designs lassen sich ausrüsten und wechseln.
+- Optional freie Einheitenwahl, ein flüchtiger Demo-Modus und beispielsatz-Audio.
+- Supabase Auth und geräteübergreifende Synchronisierung können eingerichtet werden; siehe [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 
 ---
 

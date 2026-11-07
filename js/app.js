@@ -1,4 +1,18 @@
 // Russisch Lernen - Haupt-Applikationslogik & UI-Controller
+function makeDistinctAnswerOptions(correct, pool, count = 4) {
+  const normalize = value => String(value).normalize('NFC').trim().toLocaleLowerCase();
+  const choices = [correct];
+  const seen = new Set([normalize(correct)]);
+  for (const value of [...pool].sort(() => Math.random() - 0.5)) {
+    const key = normalize(value);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    choices.push(value);
+    if (choices.length >= count) break;
+  }
+  return choices.sort(() => Math.random() - 0.5);
+}
+
 class AppController {
   constructor() {
     this.currentView = 'learn';
@@ -177,11 +191,23 @@ class AppController {
 
         let iconContent = isCompleted ? '✓' : (isUnlocked ? '★' : '🔒');
         btn.innerHTML = `<span class="node-icon">${iconContent}</span>`;
+        const manuallyUnlocked = (storage.userData.manualUnlocks || []).includes(lesson.id);
 
         btn.addEventListener('click', () => {
           if (!isUnlocked) {
-            this.showToast("Schließe zuerst die vorherigen Lektionen ab!", "🔒");
-            if (window.sfx) window.sfx.playWrong();
+            if (storage.userData.settings.freeLessonSelection) {
+              storage.unlockLessonManually(lesson.id);
+              this.renderLearningPath();
+              this.showToast('Einheit manuell freigeschaltet.', '🔓');
+            } else {
+              this.showConfirmDialog('Einheit direkt freischalten?', 'Die normale Reihenfolge bleibt erhalten. Diese Lektion wird zusätzlich manuell verfügbar.', () => {
+                storage.unlockLessonManually(lesson.id);
+                this.renderLearningPath();
+                this.showToast('Einheit manuell freigeschaltet.', '🔓');
+              });
+              return;
+            }
+            this.openLessonTheory(lesson, unit);
             return;
           }
           if (window.sfx) window.sfx.playClick();
@@ -190,7 +216,7 @@ class AppController {
 
         const label = document.createElement('div');
         label.className = 'lesson-label';
-        label.textContent = lesson.title;
+        label.textContent = `${lesson.title}${manuallyUnlocked ? ' · manuell' : ''}`;
 
         wrapper.appendChild(btn);
         wrapper.appendChild(label);
@@ -718,6 +744,7 @@ class AppController {
       feedbackExplanation.textContent = `${solutionText}. ${ex.explanation || ''}`;
       btnAction.className = 'btn-3d btn-danger';
     }
+    storage.recordAnswer(isCorrect);
 
     feedbackMsg.style.display = 'flex';
     actionText.textContent = "Weiter";
@@ -760,6 +787,11 @@ class AppController {
 
     if (quiz.lessonId) {
       storage.completeLesson(quiz.lessonId, isPerfect ? 100 : 80, isPerfect);
+    }
+    if (quiz.title === 'Blitz-Quiz (10 Fragen)') {
+      storage.userData.stats.quickQuizzesCompleted = (storage.userData.stats.quickQuizzesCompleted || 0) + 1;
+      if (storage.userData.stats.quickQuizzesCompleted >= 10) storage.unlockAchievement('quiz_10');
+      storage.saveUserData();
     }
 
     this.updateHeaderStats();
@@ -1187,7 +1219,7 @@ class AppController {
         <div class="vocab-de-word">${vocab.german}</div>
         ${vocab.exampleRu ? `
           <div class="vocab-example">
-            <div style="font-weight: 600; font-family: var(--font-cyrillic);">${vocab.exampleRu}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="font-weight: 600; font-family: var(--font-cyrillic);">${vocab.exampleRu}</div><button class="btn-ghost icon-action-btn btn-play-example" type="button" title="Beispielsatz anhören">🔊</button></div>
             <div>${vocab.exampleDe || ''}</div>
           </div>
         ` : ''}
@@ -1197,6 +1229,10 @@ class AppController {
         e.stopPropagation();
         if (window.speech) window.speech.speak(vocab.russian);
       };
+      card.querySelector('.btn-play-example')?.addEventListener('click', e => {
+        e.stopPropagation();
+        if (window.speech && vocab.exampleRu) window.speech.speak(vocab.exampleRu);
+      });
 
       card.querySelector('.btn-fav').onclick = (e) => {
         e.stopPropagation();
@@ -1270,8 +1306,7 @@ class AppController {
   startHeartRefillPractice() {
     const vocabList = storage.getAllVocab().sort(() => Math.random() - 0.5).slice(0, 5);
     const exercises = vocabList.map((v, idx) => {
-      const others = storage.getAllVocab().filter(o => o.id !== v.id).sort(() => Math.random() - 0.5).slice(0, 3);
-      const options = [v.german, ...others.map(o => o.german)].sort(() => Math.random() - 0.5);
+      const options = makeDistinctAnswerOptions(v.german, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.german));
       return {
         id: `refill_${idx}`,
         type: "choice_ru_de",
@@ -1294,9 +1329,8 @@ class AppController {
     const vocabList = storage.getAllVocab().sort(() => Math.random() - 0.5).slice(0, 10);
     const exercises = vocabList.map((v, idx) => {
       const isRuToDe = (idx % 2 === 0);
-      const others = storage.getAllVocab().filter(o => o.id !== v.id).sort(() => Math.random() - 0.5).slice(0, 3);
       if (isRuToDe) {
-        const options = [v.german, ...others.map(o => o.german)].sort(() => Math.random() - 0.5);
+        const options = makeDistinctAnswerOptions(v.german, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.german));
         return {
           id: `quick_${idx}`,
           type: "choice_ru_de",
@@ -1307,12 +1341,13 @@ class AppController {
           explanation: `${v.russian} (${v.translit}) = ${v.german}`
         };
       } else {
-        const options = [v.russian, ...others.map(o => o.russian)].sort(() => Math.random() - 0.5);
+        const options = makeDistinctAnswerOptions(v.russian, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.russian));
         return {
           id: `quick_${idx}`,
           type: "choice_de_ru",
           question: `Wie heißt '${v.german}' auf Russisch?`,
-          audioText: v.russian,
+          // Never place the target Russian word in the prompt for German → Russian.
+          audioText: undefined,
           options,
           correctIndex: options.indexOf(v.russian),
           explanation: `${v.german} = ${v.russian}`
@@ -1326,8 +1361,7 @@ class AppController {
   startListeningPractice() {
     const vocabList = storage.getAllVocab().sort(() => Math.random() - 0.5).slice(0, 6);
     const exercises = vocabList.map((v, idx) => {
-      const others = storage.getAllVocab().filter(o => o.id !== v.id).sort(() => Math.random() - 0.5).slice(0, 3);
-      const options = [v.german, ...others.map(o => o.german)].sort(() => Math.random() - 0.5);
+      const options = makeDistinctAnswerOptions(v.german, storage.getAllVocab().filter(o => o.id !== v.id).map(o => o.german));
       return {
         id: `listen_${idx}`,
         type: "listening",
@@ -1414,6 +1448,24 @@ class AppController {
   // 8. PROFIL & EINSTELLUNGEN
   // =========================================================================
   setupProfileAndSettings() {
+    const freeChoice = document.getElementById('settingFreeLessonSelection');
+    if (freeChoice) {
+      freeChoice.checked = !!storage.userData.settings.freeLessonSelection;
+      freeChoice.onchange = () => storage.updateSettings({ freeLessonSelection: freeChoice.checked });
+    }
+    const demoButton = document.getElementById('btnDemoMode');
+    if (demoButton) demoButton.onclick = () => {
+      if (storage.demoMode) {
+        storage.endDemoMode();
+        demoButton.textContent = 'Demo starten';
+        this.showToast('Demo beendet. Dein eigener Lernstand ist wiederhergestellt.', '↩️');
+      } else {
+        storage.startDemoMode();
+        demoButton.textContent = 'Demo verlassen';
+        this.showToast('Demo gestartet. Änderungen bleiben nur bis zum Verlassen erhalten.', '🧪');
+      }
+      this.renderAll();
+    };
     // SFX Toggle
     const settingSfx = document.getElementById('settingSfx');
     settingSfx.checked = storage.userData.settings.soundEffects;
@@ -1450,10 +1502,18 @@ class AppController {
       this.updateHeaderStats();
     };
 
-    // XP-Shop Kaufen-Buttons
-    document.querySelectorAll('.btn-buy-item').forEach(btn => {
-      btn.onclick = () => {
+    // Delegated handler also supports catalog items rendered into the shop.
+    const shop = document.getElementById('profileXpShop');
+    if (shop) shop.addEventListener('click', event => {
+      const btn = event.target.closest('.btn-buy-item');
+      if (btn) {
         const itemId = btn.getAttribute('data-item');
+        if (XP_SHOP_ITEMS.some(item => item.id === itemId) && (storage.userData.inventory.purchasedItems || []).includes(itemId)) {
+          storage.equipShopItem(itemId);
+          this.showToast('Gegenstand ausgerüstet.', '✨');
+          this.renderProfile();
+          return;
+        }
         const cost = parseInt(btn.getAttribute('data-cost')) || 100;
         const res = storage.buyShopItem(itemId, cost);
         if (res.success) {
@@ -1465,7 +1525,7 @@ class AppController {
           if (window.sfx) window.sfx.playWrong();
           this.showToast(res.reason || 'Nicht genügend XP vorhanden!', '⚠️');
         }
-      };
+      }
     });
 
     // Profil-Titel Wähler
@@ -1507,7 +1567,8 @@ class AppController {
     const userLevel = storage.getUserLevel();
     const activeTitle = storage.userData.inventory?.activeTitle || userLevel.title;
     document.getElementById('profileLevelTitle').textContent = `Stufe ${userLevel.level}: ${activeTitle}`;
-    document.getElementById('profileUsername').textContent = `Lerner • ${activeTitle}`;
+    const accountName = window.accountSync?.user?.user_metadata?.username;
+    document.getElementById('profileUsername').textContent = accountName ? `${accountName} • ${activeTitle}` : `Lerner • ${activeTitle}`;
 
     const xpInLevel = storage.userData.xp - userLevel.minXp;
     const xpNeededInLevel = userLevel.nextXp - userLevel.minXp;
@@ -1521,9 +1582,34 @@ class AppController {
     document.getElementById('statLongestStreak').textContent = `${storage.userData.longestStreak || 0} Tage`;
     document.getElementById('statCompletedLessons').textContent = Object.keys(storage.userData.completedLessons).length;
     document.getElementById('statLearnedVocab').textContent = Object.values(storage.userData.learnedVocab).filter(v => v.learned).length;
+    const shopBalance = document.getElementById('shopXpBalance');
+    if (shopBalance) shopBalance.textContent = `${storage.userData.xp} XP`;
+    const avatar = document.getElementById('profileAvatar');
+    if (avatar) {
+      const equipped = storage.userData.inventory?.equippedItems || {};
+      avatar.textContent = equipped.avatar || '👨‍🚀';
+      avatar.dataset.frame = equipped.frame || '';
+    }
+    const inv = storage.userData.inventory || {};
+    const shopGrid = document.querySelector('#profileXpShop .shop-grid');
+    if (shopGrid) {
+      shopGrid.querySelectorAll('.shop-extra').forEach(node => node.remove());
+      let lastCategory = '';
+      XP_SHOP_ITEMS.forEach(item => {
+        if (item.category !== lastCategory) {
+          lastCategory = item.category;
+          const heading = document.createElement('h4'); heading.className = 'shop-category-heading shop-extra'; heading.textContent = item.category;
+          shopGrid.appendChild(heading);
+        }
+        const owned = (inv.purchasedItems || []).includes(item.id);
+        const equipped = inv.equippedItems?.[item.key] === item.value;
+        const card = document.createElement('div'); card.className = 'shop-card shop-extra';
+        card.innerHTML = `<div class="shop-card-icon">${item.icon}</div><div class="shop-card-info"><h4>${item.title}</h4><p>${item.desc}</p></div><button class="btn-3d btn-primary btn-buy-item" data-item="${item.id}" data-cost="${item.cost}"><span>${owned ? (equipped ? 'Ausgerüstet ✓' : 'Ausrüsten') : `${item.cost} ⚡`}</span></button>`;
+        shopGrid.appendChild(card);
+      });
+    }
 
     // Inventar-Status
-    const inv = storage.userData.inventory || {};
     const shieldEl = document.getElementById('invShieldStatus');
     if (shieldEl) {
       shieldEl.textContent = inv.shieldActive ? '🛡️ Schild: Aktiv (1x)' : '🛡️ Schild: Inaktiv';
@@ -1554,21 +1640,34 @@ class AppController {
         selectTitle.appendChild(opt);
       });
     }
+    document.querySelectorAll('.btn-buy-item').forEach(btn => {
+      const itemId = btn.dataset.item;
+      const permanent = !['shield','freeze','booster','hearts_refill'].includes(itemId);
+      const owned = (inv.purchasedItems || []).includes(itemId) || (itemId.startsWith('title_') && (inv.unlockedTitles || []).includes(itemId.slice(6)));
+      btn.disabled = permanent && owned && !XP_SHOP_ITEMS.some(item => item.id === itemId);
+      if (owned) {
+        const shopItem = XP_SHOP_ITEMS.find(item => item.id === itemId);
+        btn.querySelector('span').textContent = shopItem ? (inv.equippedItems?.[shopItem.key] === shopItem.value ? 'Ausgerüstet ✓' : 'Ausrüsten') : 'Im Besitz ✓';
+      }
+    });
 
     // Erfolge (20 Abzeichen)
     const achList = document.getElementById('profileAchievementsList');
     if (!achList) return;
     achList.innerHTML = '';
 
+    const unlockedCount = ACHIEVEMENTS_LIST.filter(a => storage.userData.achievements.includes(a.id)).length;
+    const achHeading = document.querySelector('#profileAchievementsList')?.previousElementSibling;
+    if (achHeading) achHeading.textContent = `🏆 Erfolge & Abzeichen (${unlockedCount} freigeschaltet · ${ACHIEVEMENTS_LIST.length-unlockedCount} gesperrt)`;
     ACHIEVEMENTS_LIST.forEach(ach => {
       const isUnlocked = storage.userData.achievements.includes(ach.id);
       const card = document.createElement('div');
-      card.className = `achievement-card ${isUnlocked ? '' : 'locked'}`;
+      card.className = `achievement-card ${isUnlocked ? '' : 'locked'} rarity-${ach.rarity || 'gewöhnlich'}`;
       card.innerHTML = `
-        <div class="achievement-icon">${ach.icon}</div>
+        <div class="achievement-icon">${isUnlocked ? ach.icon : '🔒'}</div>
         <div>
-          <div style="font-weight: 800; font-size: 0.95rem;">${ach.title} ${isUnlocked ? '✓' : ''}</div>
-          <div style="font-size: 0.8rem; color: var(--text-muted);">${ach.desc}</div>
+          <div style="font-weight: 800; font-size: 0.95rem;">${isUnlocked ? ach.title : 'Geheime Errungenschaft'} ${isUnlocked ? '✓' : ''}</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">${isUnlocked ? `${ach.desc} · ${ach.rarity || 'gewöhnlich'}` : 'Bedingung wird nach dem Freischalten enthüllt.'}</div>
         </div>
       `;
       achList.appendChild(card);

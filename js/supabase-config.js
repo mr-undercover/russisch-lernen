@@ -1,0 +1,3 @@
+// Add the Supabase project URL and public anon key from your project settings.
+// This key is intended for browser use; never put a service_role key here.
+window.SUPABASE_CONFIG = { url: "https://isagzspddyjyvvbxsmla.supabase.co", anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYWd6c3BkZHlqeXZ2YnhzbWxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNzgyOTAsImV4cCI6MjEwOTY1NDI5MH0.RaIjTDOUVvAHZh60u7nGQZ4b8XSyW43OhITDgMd7-g8" };
