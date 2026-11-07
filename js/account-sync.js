@@ -148,6 +148,10 @@
     storage.userData.inventory={...storage.userData.inventory,...data.inventory};
     storage.userData.hearts=data.inventory?.hearts??storage.userData.hearts;
     storage.userData.stats.totalXpEarned=data.total_xp_earned??storage.userData.stats.totalXpEarned;
+    // Authenticated users earn XP through the server, so StorageManager.addXp
+    // intentionally exits before its local activity/streak update. Record the
+    // study day only after Supabase has confirmed a completed learning session.
+    storage.recordActivity();
     storage.saveUserData(); window.app?.updateHeaderStats(); return data;
   };
   const purchaseItem = async (itemId,requestId=crypto.randomUUID()) => {
